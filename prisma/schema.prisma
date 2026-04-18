@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Organization {
+  id                BigInt        @id @default(autoincrement())
+  name              String
+  requisitionPrefix String?
+  contactEmail      String
+  contactPhone      String?
+  address           String?       @db.Text
+  isActive          Boolean       @default(true)
+  subscriptionPlan  String        @default("FREE")
+  logoUrl           String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  users             User[]
+  requisitions      Requisition[]
+
+  @@map("organizations")
+}
+
+model User {
+  id              BigInt         @id @default(autoincrement())
+  organizationId  BigInt         @map("organization_id")
+  email           String         @unique
+  fullName        String?
+  passwordHash    String?
+  profilePhotoUrl String?
+  role            UserRole
+  department      String?
+  designation     String?
+  isActive        Boolean        @default(true)
+  lastLogin       DateTime?
+  createdAt       DateTime       @default(now())
+
+  organization    Organization   @relation(fields: [organizationId], references: [id])
+  
+  // Back-relations for requisitions created, dispatched, approved, or paid by this user
+  createdRequisitions     Requisition[] @relation("CreatedBy")
+  dispatchedRequisitions  Requisition[] @relation("DispatchedBy")
+  approvedRequisitions    Requisition[] @relation("ApprovedBy")
+  paidRequisitions        Requisition[] @relation("PaidBy")
+
+  approvals               Approval[]
+  attachmentsUploaded     RequisitionAttachment[]
+  syncLogs                SyncLog[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  PURCHASER
+  MANAGER
+  ACCOUNTANT
+}
+
+model RequisitionType {
+  id          BigInt         @id @default(autoincrement())
+  name        String         @unique
+  description String?
+  createdAt   DateTime       @default(now())
+
+  requisitions Requisition[]
+
+  @@map("requisition_types")
+}
+
+model Requisition {
+  id                      BigInt             @id @default(autoincrement())
+  organizationId          BigInt             @map("organization_id")
+  requisitionTypeId       BigInt?            @map("requisition_type_id")
+  createdById             BigInt?            @map("created_by")
+  
+  requestId               String?            @unique
+  status                  RequisitionStatus  @default(DRAFT)
+  approvalStatus          ApprovalStatus     @default(PENDING)
+  paymentStatus           PaymentStatus      @default(NOT_DONE)
+  dispatchStatus          DispatchStatus     @default(NOT_DISPATCHED)
+  priority                Priority           @default(NORMAL)
+
+  description             String?            @db.Text
+  siteAddress             String?
+  materialDescription     String?
+  quantity                Int?
+  amount                  Decimal?           @db.Decimal(15, 2)
+
+  poDetails               String?
+  requiredFor             String?
+  vendorName              String?
+  indentNo                String?
+
+  modeOfPayment           ModeOfPayment?
+  paymentDetails          String?
+
+  paymentUtrNo            String?
+  paymentMode             String?
+  paymentDate             DateTime?
+  paymentAmount           Decimal?           @db.Decimal(15, 2)
+
+  paymentPhotoUrl         String?
+  materialPhotoUrl        String?
+  billPhotoUrl            String?
+  vendorPaymentDetailsUrl String?
+
+  approvalNotes           String?            @db.Text
+  materialReceived        Boolean?           @default(false)
+  receiptNotes            String?            @db.Text
+
+  dispatchedById          BigInt?            @map("dispatched_by")
+  approvedById            BigInt?            @map("approved_by")
+  paidById                BigInt?            @map("paid_by")
+  dispatchedAt            DateTime?
+
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt
+  submittedAt             DateTime?
+  approvedAt              DateTime?
+  paidAt                  DateTime?
+  managerTime             DateTime?
+  accountantTime          DateTime?
+
+  cardSubtitleInfo        String?
+
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  type            RequisitionType? @relation(fields: [requisitionTypeId], references: [id])
+  createdBy       User?            @relation("CreatedBy", fields: [createdById], references: [id])
+  dispatchedBy    User?            @relation("DispatchedBy", fields: [dispatchedById], references: [id])
+  approvedBy      User?            @relation("ApprovedBy", fields: [approvedById], references: [id])
+  paidBy          User?            @relation("PaidBy", fields: [paidById], references: [id])
+
+  attachments     RequisitionAttachment[]
+  approvals       Approval[]
+
+  @@index([organizationId], name: "idx_organization")
+  @@index([status], name: "idx_status")
+  @@index([approvalStatus], name: "idx_approval_status")
+  @@index([paymentStatus], name: "idx_payment_status")
+  @@index([createdAt(sort: Desc)], name: "idx_created_at")
+  @@map("requisitions")
+}
+
+enum RequisitionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PAID
+  COMPLETED
+}
+
+enum ApprovalStatus {
+  PENDING
+  TO_REVIEW
+  HOLD
+  APPROVED
+  REJECTED
+}
+
+enum PaymentStatus {
+  NOT_DONE
+  PARTIAL
+  DONE
+}
+
+enum DispatchStatus {
+  NOT_DISPATCHED
+  DISPATCHED
+  DELIVERED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ModeOfPayment {
+  CASH
+  NEFT
+  RTGS
+  UPI
+  CARD
+  CHEQUE
+  OTHER
+}
+
+model RequisitionAttachment {
+  id             BigInt              @id @default(autoincrement())
+  requisitionId  BigInt?             @map("requisition_id")
+  fileName       String?
+  fileUrl        String?
+  fileSize       BigInt?
+  category       AttachmentCategory?
+  uploadedById   BigInt?             @map("uploaded_by")
+  uploadedAt     DateTime            @default(now())
+
+  requisition    Requisition?        @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  uploadedBy     User?               @relation(fields: [uploadedById], references: [id])
+
+  @@map("attachments")
+}
+
+enum AttachmentCategory {
+  ITEM
+  BILL
+  PAYMENT
+}
+
+model Approval {
+  id             BigInt           @id @default(autoincrement())
+  requisitionId  BigInt           @map("requisition_id")
+  approverId     BigInt           @map("approver_id")
+  sequenceOrder  Int?
+  status         ApprovalStatus   @default(PENDING)
+  comment        String?
+  actionAt       DateTime?
+  createdAt      DateTime         @default(now())
+
+  requisition    Requisition      @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  approver       User             @relation(fields: [approverId], references: [id])
+
+  @@map("approvals")
+}
+
+model SyncLog {
+  id           BigInt          @id @default(autoincrement())
+  userId       BigInt          @map("user_id")
+  entityType   String?
+  entityId     BigInt?
+  operation    SyncOperation?
+  payload      String?         @db.Text
+  synced       Boolean         @default(false)
+  syncAt       DateTime?
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  user         User            @relation(fields: [userId], references: [id])
+
+  @@index([synced], name: "idx_synced")
+  @@index([createdAt(sort: Desc)], name: "idx_synclog_created_at")
+  @@map("sync_logs")
+}
+
+enum SyncOperation {
+  CREATE
+  UPDATE
+  DELETE
+}
