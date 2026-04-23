@@ -18,18 +18,28 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { approvalStatus, notes } = await req.json();
 
   if (DEV_IDS.has(user.sub)) {
-    const store: any[] = g.__devReqStore || [];
-    const idx = store.findIndex(r => String(r.id) === id);
+    const reqStore: any[] = g.__devReqStore || [];
+    const repairStore: any[] = g.__devRepairStore || [];
+    
+    let targetStore = reqStore;
+    let idx = reqStore.findIndex(r => String(r.id) === id);
+    
+    if (idx === -1) {
+      targetStore = repairStore;
+      idx = repairStore.findIndex(r => String(r.id) === id);
+    }
+
     if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    store[idx] = {
-      ...store[idx],
+    
+    targetStore[idx] = {
+      ...targetStore[idx],
       approvalStatus,
       approvalNotes: notes || null,
       approvedByName: role === 'ADMIN' ? 'Test Admin' : 'Test Manager',
       approvedAt: new Date().toISOString(),
-      status: approvalStatus === 'APPROVED' ? 'APPROVED' : approvalStatus === 'REJECTED' ? 'REJECTED' : store[idx].status,
+      status: approvalStatus === 'APPROVED' ? 'APPROVED' : approvalStatus === 'REJECTED' ? 'REJECTED' : targetStore[idx].status,
     };
-    return NextResponse.json(store[idx]);
+    return NextResponse.json(targetStore[idx]);
   }
 
   try {
@@ -38,12 +48,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       data: {
         approvalStatus: approvalStatus as any,
         approvalNotes: notes,
+        approvedById: BigInt(user.sub),
         approvedAt: approvalStatus === 'APPROVED' ? new Date() : undefined,
+        managerTime: new Date(),
         status: approvalStatus === 'APPROVED' ? 'APPROVED' : approvalStatus === 'REJECTED' ? 'REJECTED' : undefined,
       },
     });
     return NextResponse.json(requisition);
   } catch (e: any) {
+    console.error('Approval error:', e);
     return NextResponse.json({ error: 'Approval failed' }, { status: 500 });
   }
 }

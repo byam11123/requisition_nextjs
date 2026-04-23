@@ -205,6 +205,13 @@ function PaymentModal({ open, onClose, onSubmit, loading, amount }: any) {
   );
 }
 
+const InfoField = ({ label, value }: { label: string; value?: any }) => (
+  <div>
+    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+    <p className="text-slate-200">{value || '—'}</p>
+  </div>
+);
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ViewRequisitionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -217,12 +224,6 @@ export default function ViewRequisitionPage({ params }: { params: Promise<{ id: 
   // Local preview URLs for just-uploaded files (before API returns updated URLs)
   const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    const u = localStorage.getItem('user');
-    if (u) setUser(JSON.parse(u));
-    loadReq();
-  }, [id]);
-
   const loadReq = async () => {
     setLoading(true);
     try {
@@ -232,6 +233,12 @@ export default function ViewRequisitionPage({ params }: { params: Promise<{ id: 
     } catch { }
     finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    const u = localStorage.getItem('user');
+    if (u) setUser(JSON.parse(u));
+    loadReq();
+  }, [id]);
 
   // ── RBAC flags (mirrors Spring Boot service exactly) ──────────────────────
   const role = user?.role;
@@ -268,14 +275,18 @@ export default function ViewRequisitionPage({ params }: { params: Promise<{ id: 
     setModalLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await fetch(`/api/requisitions/${id}/approve`, {
+      const res = await fetch(`/api/requisitions/${id}/approve`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ approvalStatus: status, notes }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Approval failed');
+      }
       await loadReq();
       setApprovalOpen(false);
-    } catch { alert('Approval failed'); }
+    } catch (e: any) { alert(e.message || 'Approval failed'); }
     finally { setModalLoading(false); }
   };
 
@@ -289,18 +300,14 @@ export default function ViewRequisitionPage({ params }: { params: Promise<{ id: 
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (res.ok) {
-        const updated = await res.json();
-        // Patch only the payment-related fields in state — no full reload
-        setReq((prev: any) => ({
-          ...prev,
-          paymentStatus: updated.paymentStatus ?? data.paymentStatus,
-          paymentUtrNo:  updated.paymentUtrNo  ?? data.utrNo,
-          paymentMode:   updated.paymentMode   ?? data.paymentMode,
-          paidAt:        updated.paidAt        ?? new Date().toISOString(),
-          paidByName:    updated.paidByName,
-        }));
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Payment update failed');
       }
+      const updated = await res.json();
+      
+      // Update state with new data including user info
+      await loadReq();
 
       // 2. Upload payment proof if provided
       if (file) {
@@ -313,22 +320,27 @@ export default function ViewRequisitionPage({ params }: { params: Promise<{ id: 
         const upRes = await fetch('/api/uploads', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
         if (upRes.ok) {
           const { url } = await upRes.json();
-          // Replace blob with persistent URL; also patch req so it survives refresh
           setLocalPreviews(prev => ({ ...prev, paymentPhotoUrl: url }));
           setReq((prev: any) => ({ ...prev, paymentPhotoUrl: url }));
         }
       }
 
       setPaymentOpen(false);
-    } catch { alert('Payment update failed'); }
+    } catch (e: any) { alert(e.message || 'Payment update failed'); }
     finally { setModalLoading(false); }
   };
 
   const handleDispatch = async () => {
     if (!confirm('Mark this requisition as dispatched?')) return;
-    const token = localStorage.getItem('token');
-    await fetch(`/api/requisitions/${id}/dispatch`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-    await loadReq();
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/requisitions/${id}/dispatch`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Dispatch failed');
+      }
+      await loadReq();
+    } catch (e: any) { alert(e.message || 'Dispatch failed'); }
   };
 
   // File upload — shows blob preview instantly, replaces with persistent URL on success.
@@ -389,13 +401,6 @@ export default function ViewRequisitionPage({ params }: { params: Promise<{ id: 
 
   const activeStep = getActiveStep();
 
-  const InfoField = ({ label, value }: { label: string; value?: any }) => (
-    <div>
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-slate-200">{value || '—'}</p>
-    </div>
-  );
-
   const statusColor = (s: string) => {
     const m: Record<string, string> = {
       APPROVED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -415,14 +420,14 @@ export default function ViewRequisitionPage({ params }: { params: Promise<{ id: 
   };
 
   const timelineSteps = [
-    { label: 'Submitted', date: req.createdAt, by: req.createdByName, note: null, icon: Flag, color: 'bg-indigo-500' },
+    { label: 'Submitted', date: req.createdAt, by: req.createdByName || req.createdBy?.fullName, note: null, icon: Flag, color: 'bg-indigo-500' },
     {
       label: req.approvalStatus === 'REJECTED' ? 'Rejected' : req.approvalStatus === 'HOLD' ? 'On Hold' : 'Approved',
-      date: req.approvedAt, by: req.approvedByName, note: req.approvalNotes, icon: CheckCircle,
+      date: req.approvedAt, by: req.approvedByName || req.approvedBy?.fullName, note: req.approvalNotes, icon: CheckCircle,
       color: req.approvalStatus === 'REJECTED' ? 'bg-rose-500' : req.approvalStatus === 'HOLD' ? 'bg-amber-500' : 'bg-emerald-500',
     },
-    { label: 'Payment Processed', date: req.paidAt, by: req.paidByName, note: req.paymentUtrNo ? `UTR: ${req.paymentUtrNo} • ${req.paymentMode || ''}` : null, icon: IndianRupee, color: 'bg-purple-500' },
-    { label: 'Dispatched & Completed', date: req.dispatchedAt, by: req.dispatchedByName, note: null, icon: Package, color: 'bg-blue-500' },
+    { label: 'Payment Processed', date: req.paidAt, by: req.paidByName || req.paidBy?.fullName, note: req.paymentUtrNo ? `UTR: ${req.paymentUtrNo} • ${req.paymentMode || ''}` : null, icon: IndianRupee, color: 'bg-purple-500' },
+    { label: 'Dispatched & Completed', date: req.dispatchedAt, by: req.dispatchedByName || req.dispatchedBy?.fullName, note: null, icon: Package, color: 'bg-blue-500' },
   ];
 
   return (
@@ -459,14 +464,15 @@ export default function ViewRequisitionPage({ params }: { params: Promise<{ id: 
               <InfoField label="Vendor" value={req.vendorName} />
               <InfoField label="PO Details" value={req.poDetails} />
               <InfoField label="Indent No" value={req.indentNo} />
-              {req.approvedByName && <InfoField label="Approved By" value={req.approvedByName} />}
-              {req.paidByName && <InfoField label="Paid By" value={req.paidByName} />}
+              {(req.approvedByName || req.approvedBy?.fullName) && <InfoField label="Approved By" value={req.approvedByName || req.approvedBy?.fullName} />}
+              {(req.paidByName || req.paidBy?.fullName) && <InfoField label="Paid By" value={req.paidByName || req.paidBy?.fullName} />}
+              {(req.dispatchedByName || req.dispatchedBy?.fullName) && <InfoField label="Dispatched By" value={req.dispatchedByName || req.dispatchedBy?.fullName} />}
               {req.paymentUtrNo && <InfoField label="UTR No" value={req.paymentUtrNo} />}
               {req.paymentMode && <InfoField label="Payment Mode" value={req.paymentMode} />}
               {req.approvalNotes && (
                 <div className="col-span-full">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Approval Notes</p>
-                  <p className="text-slate-300 italic">"{req.approvalNotes}"</p>
+                  <p className="text-slate-300 italic">&quot;{req.approvalNotes}&quot;</p>
                 </div>
               )}
               {req.description && (

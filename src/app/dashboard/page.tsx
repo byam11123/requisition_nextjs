@@ -147,9 +147,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-100">Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-100">Requisition Register</h1>
+          <p className="mt-1 text-sm text-slate-400">Track purchase requests, approvals, payments, and dispatch flow.</p>
+        </div>
         <div className="flex flex-wrap gap-2">
           {selectedIds.length > 0 && user?.role === 'ADMIN' && (
             <button id="btn-bulk-delete" onClick={handleBulkDelete} disabled={deleting}
@@ -163,7 +165,7 @@ export default function DashboardPage() {
             <Download size={16} />
             {selectedIds.length > 0 ? `Export (${selectedIds.length})` : 'Export All'}
           </button>
-          {user?.role === 'PURCHASER' && (
+          {(user?.role === 'PURCHASER' || user?.role === 'ADMIN') && (
             <Link id="btn-new-req" href="/dashboard/create"
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-600/20">
               <Plus size={16} /> New Requisition

@@ -18,18 +18,28 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const body = await req.json();
 
   if (DEV_IDS.has(user.sub)) {
-    const store: any[] = g.__devReqStore || [];
-    const idx = store.findIndex(r => String(r.id) === id);
+    const reqStore: any[] = g.__devReqStore || [];
+    const repairStore: any[] = g.__devRepairStore || [];
+    
+    let targetStore = reqStore;
+    let idx = reqStore.findIndex(r => String(r.id) === id);
+    
+    if (idx === -1) {
+      targetStore = repairStore;
+      idx = repairStore.findIndex(r => String(r.id) === id);
+    }
+
     if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    store[idx] = {
-      ...store[idx],
+
+    targetStore[idx] = {
+      ...targetStore[idx],
       paymentStatus: body.paymentStatus,
       paymentUtrNo: body.utrNo,
       paymentMode: body.paymentMode,
-      paidAt: body.paymentStatus === 'DONE' ? new Date().toISOString() : store[idx].paidAt,
+      paidAt: body.paymentStatus === 'DONE' ? new Date().toISOString() : targetStore[idx].paidAt,
       paidByName: role === 'ADMIN' ? 'Test Admin' : 'Test Accountant',
     };
-    return NextResponse.json(store[idx]);
+    return NextResponse.json(targetStore[idx]);
   }
 
   try {
@@ -41,11 +51,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         paymentMode: body.paymentMode,
         paymentDate: body.paymentDate ? new Date(body.paymentDate) : undefined,
         paymentAmount: body.amount,
+        paidById: BigInt(user.sub),
         paidAt: body.paymentStatus === 'DONE' ? new Date() : undefined,
+        accountantTime: new Date(),
       },
     });
     return NextResponse.json(requisition);
   } catch (e: any) {
+    console.error('Payment error:', e);
     return NextResponse.json({ error: 'Payment update failed' }, { status: 500 });
   }
 }

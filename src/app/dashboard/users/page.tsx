@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Edit, MoreVertical, CheckCircle, XCircle, Trash2, Loader2, AlertCircle, X } from 'lucide-react';
+import { Plus, Search, Edit, MoreVertical, CheckCircle, XCircle, Trash2, Loader2, AlertCircle, X, ShieldCheck } from 'lucide-react';
+
+import ActionToast from '../action-toast';
+import PageAccessModal from './page-access-modal';
 
 const MOCK_USERS = [
-  { id: '101', email: 'manager@example.com', fullName: 'Mike Manager', role: 'MANAGER', designation: 'Senior Manager', department: 'Operations', isActive: true },
-  { id: '102', email: 'purchaser@example.com', fullName: 'Paul Purchaser', role: 'PURCHASER', designation: 'Purchase Officer', department: 'Procurement', isActive: true },
-  { id: '103', email: 'accountant@example.com', fullName: 'Alice Accountant', role: 'ACCOUNTANT', designation: 'Finance Exec', department: 'Finance', isActive: true },
-  { id: '104', email: 'inactive@example.com', fullName: 'Jack Old', role: 'PURCHASER', designation: '-', department: '-', isActive: false },
+  { id: '9998', email: 'manager@example.com', fullName: 'Mike Manager', role: 'MANAGER', designation: 'Senior Manager', department: 'Operations', isActive: true },
+  { id: '9997', email: 'purchaser@example.com', fullName: 'Paul Purchaser', role: 'PURCHASER', designation: 'Purchase Officer', department: 'Procurement', isActive: true },
+  { id: '9996', email: 'accountant@example.com', fullName: 'Alice Accountant', role: 'ACCOUNTANT', designation: 'Finance Exec', department: 'Finance', isActive: true },
+  { id: '9995', email: 'inactive@example.com', fullName: 'Jack Old', role: 'PURCHASER', designation: '-', department: '-', isActive: false },
 ];
 
 function CreateUserModal({ open, onClose, onSuccess }: any) {
@@ -80,8 +83,15 @@ export default function UserManagementPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [menuUser, setMenuUser] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [accessUser, setAccessUser] = useState<any>(null);
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
 
   useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -128,6 +138,14 @@ export default function UserManagementPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
+      {toast && (
+        <ActionToast
+          message={toast.message}
+          tone={toast.tone}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-100">User Management</h1>
         <button id="btn-add-user" onClick={() => setCreateOpen(true)}
@@ -223,6 +241,10 @@ export default function UserManagementPage() {
                                 <CheckCircle size={16} className="text-emerald-400" /> Activate
                               </button>
                           }
+                          <button onClick={() => { setAccessUser(u); setMenuUser(null); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5 rounded-xl">
+                            <ShieldCheck size={16} className="text-indigo-400" /> Page Access
+                          </button>
                           <button onClick={() => { if (confirm(`Delete ${u.fullName}?`)) execAction(u.id, 'delete'); }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-rose-400 hover:bg-rose-500/10 rounded-xl">
                             <Trash2 size={16} /> Delete User
@@ -239,6 +261,32 @@ export default function UserManagementPage() {
       </div>
 
       <CreateUserModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); loadUsers(); }} />
+      <PageAccessModal
+        key={`${accessUser?.id ?? 'closed'}-${accessUser?.pageAccess?.join(',') ?? 'default'}`}
+        open={!!accessUser}
+        user={accessUser}
+        onClose={() => setAccessUser(null)}
+        onToast={(message, tone = 'success') => setToast({ message, tone })}
+        onSaved={(pageAccess) => {
+          const rawUser = window.localStorage.getItem('user');
+          if (rawUser && accessUser?.id) {
+            try {
+              const storedUser = JSON.parse(rawUser);
+              if (String(storedUser.id) === String(accessUser.id)) {
+                window.localStorage.setItem('user', JSON.stringify({ ...storedUser, pageAccess }));
+              }
+            } catch {
+              // Keep dashboard working even if local storage user is malformed.
+            }
+          }
+
+          setUsers((current) =>
+            current.map((entry) =>
+              entry.id === accessUser?.id ? { ...entry, pageAccess } : entry,
+            ),
+          );
+        }}
+      />
     </div>
   );
 }

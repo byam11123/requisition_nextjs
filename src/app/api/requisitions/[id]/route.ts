@@ -78,7 +78,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     const requisition = await prisma.requisition.findFirst({
       where: { id: BigInt(id), organizationId: dbUser.organizationId },
-      include: { createdBy: { select: { fullName: true, id: true } } },
+      include: {
+        createdBy: { select: { fullName: true, id: true } },
+        approvedBy: { select: { fullName: true, id: true } },
+        paidBy: { select: { fullName: true, id: true } },
+        dispatchedBy: { select: { fullName: true, id: true } },
+      },
     });
     if (!requisition) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(requisition);
