@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-inter), "Inter", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-sans: var(--font-expose), "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --animate-fade-in-up: fade-in-up 0.5s ease-out;
   @keyframes fade-in-up {
     0% {

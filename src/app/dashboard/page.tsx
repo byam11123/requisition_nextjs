@@ -6,11 +6,16 @@ import {
   Search, Download, Trash2, Plus, Eye, Edit, Truck,
   Clock, CheckCircle, IndianRupee, ReceiptText, Filter
 } from 'lucide-react';
+import {
+  DEFAULT_REQUISITION_WORKFLOW_CONFIG,
+  canRunRequisitionWorkflowStep,
+} from '@/lib/requisition-workflow-config';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [workflowConfig, setWorkflowConfig] = useState(DEFAULT_REQUISITION_WORKFLOW_CONFIG);
   const [searchQuery, setSearchQuery] = useState('');
   const [approvalFilter, setApprovalFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
@@ -25,6 +30,7 @@ export default function DashboardPage() {
     const u = localStorage.getItem('user');
     if (u) setUser(JSON.parse(u));
     fetchRequisitions();
+    fetchWorkflowConfig();
   }, []);
 
   const fetchRequisitions = async () => {
@@ -34,6 +40,20 @@ export default function DashboardPage() {
       if (res.ok) setRequisitions(await res.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+
+  const fetchWorkflowConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/workflow-config/requisition', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setWorkflowConfig(await res.json());
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const stats = useMemo(() => ({
@@ -147,9 +167,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-100">Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-100">Requisition Register</h1>
+          <p className="mt-1 text-sm text-slate-400">Track purchase requests, approvals, payments, and dispatch flow.</p>
+        </div>
         <div className="flex flex-wrap gap-2">
           {selectedIds.length > 0 && user?.role === 'ADMIN' && (
             <button id="btn-bulk-delete" onClick={handleBulkDelete} disabled={deleting}
@@ -163,7 +185,7 @@ export default function DashboardPage() {
             <Download size={16} />
             {selectedIds.length > 0 ? `Export (${selectedIds.length})` : 'Export All'}
           </button>
-          {user?.role === 'PURCHASER' && (
+          {(user?.role === 'PURCHASER' || user?.role === 'ADMIN') && (
             <Link id="btn-new-req" href="/dashboard/create"
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-600/20">
               <Plus size={16} /> New Requisition
@@ -301,7 +323,12 @@ export default function DashboardPage() {
                             <Edit size={16} />
                           </Link>
                         )}
-                        {user?.role === 'PURCHASER' && row.dispatchStatus === 'NOT_DISPATCHED' && row.approvalStatus === 'APPROVED' && (
+                        {canRunRequisitionWorkflowStep({
+                          config: workflowConfig,
+                          key: 'dispatch',
+                          roleKey: user?.customRoleKey || user?.role,
+                          record: row,
+                        }).allowed && (
                           <button id={`btn-dispatch-${id}`} onClick={e => handleDispatch(e, id)}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 transition-colors">
                             <Truck size={16} />

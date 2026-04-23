@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { hydrateDemoModuleGlobals } from '@/lib/demo-module-store';
 
 // Add BigInt support for JSON.stringify
 declare global {
@@ -11,6 +12,8 @@ declare global {
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
+
+hydrateDemoModuleGlobals();
 
 // ── Dev bypass helpers ───────────────────────────────────────────────────────
 const DEV_IDS = new Set(['9999', '9998', '9997', '9996']);
