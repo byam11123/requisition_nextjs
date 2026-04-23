@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Building2, User, Mail, Phone, Lock, MapPin, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Building2, User, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function RegisterOrganizationPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function RegisterOrganizationPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Registration failed');
       router.push('/?message=Organization+registered!+Please+log+in.');
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'Registration failed'); }
     finally { setLoading(false); }
   };
 
@@ -39,7 +39,7 @@ export default function RegisterOrganizationPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-2xl animate-fade-in-up">
-        <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-2xl relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/50 p-6 shadow-2xl backdrop-blur-xl sm:p-8 md:p-10">
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
 
           <div className="text-center mb-10">

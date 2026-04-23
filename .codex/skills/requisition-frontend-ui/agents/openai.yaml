@@ -1,0 +1,4 @@
+interface:
+  display_name: "Requisition Frontend UI"
+  short_description: "Keep frontend work aligned with repo UI."
+  default_prompt: "Use $requisition-frontend-ui to design or refine frontend pages in this repository using the existing dashboard patterns."

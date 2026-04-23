@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Send, AlertCircle, Loader2 } from 'lucide-react';
+import FormSelect, {
+  type FormSelectOption,
+} from '@/app/dashboard/components/form-select';
 
 export default function CreateRequisitionPage() {
   const router = useRouter();
@@ -31,21 +34,29 @@ export default function CreateRequisitionPage() {
         body: JSON.stringify({ ...form, submit }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      router.push('/dashboard');
-    } catch (err: any) { setError(err.message); }
+      router.push('/dashboard/requisition');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
     finally { setLoading(false); }
   };
 
   const inputCls = "w-full bg-slate-950/50 border border-white/5 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500/50 text-sm placeholder:text-slate-600 transition-colors";
   const labelCls = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2";
+  const priorityOptions: FormSelectOption<string>[] = [
+    { value: 'LOW', label: 'Low' },
+    { value: 'NORMAL', label: 'Normal' },
+    { value: 'HIGH', label: 'High' },
+    { value: 'URGENT', label: 'Urgent' },
+  ];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
-      <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
-        <ArrowLeft size={16} /> Back to Dashboard
+      <Link href="/dashboard/requisition" className="inline-flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
+        <ArrowLeft size={16} /> Back to Requisition
       </Link>
 
-      <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-8">
+      <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-5 sm:p-6 lg:p-8">
         <h1 className="text-2xl font-bold text-slate-100 mb-1">New Requisition</h1>
         <p className="text-slate-400 text-sm mb-6">Fill in the details to submit a new purchase request.</p>
 
@@ -65,12 +76,11 @@ export default function CreateRequisitionPage() {
             </div>
             <div>
               <label className={labelCls}>Priority</label>
-              <select value={form.priority} onChange={set('priority')} className={inputCls}>
-                <option value="LOW">Low</option>
-                <option value="NORMAL">Normal</option>
-                <option value="HIGH">High</option>
-                <option value="URGENT">Urgent</option>
-              </select>
+              <FormSelect
+                value={form.priority}
+                options={priorityOptions}
+                onChange={(value) => setForm((current) => ({ ...current, priority: value }))}
+              />
             </div>
           </div>
 

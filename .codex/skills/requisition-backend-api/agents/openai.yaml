@@ -1,0 +1,4 @@
+interface:
+  display_name: "Requisition Backend API"
+  short_description: "Keep backend work aligned with repo API."
+  default_prompt: "Use $requisition-backend-api to build or refine backend routes, auth, Prisma access, and workflow logic in this repository."

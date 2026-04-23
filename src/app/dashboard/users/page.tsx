@@ -1,20 +1,78 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Edit, MoreVertical, CheckCircle, XCircle, Trash2, Loader2, AlertCircle, X } from 'lucide-react';
+import { Plus, Search, Edit, MoreVertical, CheckCircle, XCircle, Trash2, Loader2, X, ShieldCheck } from 'lucide-react';
+
+import ActionToast from '../action-toast';
+import FilterDropdown, {
+  type FilterDropdownOption,
+} from '@/app/dashboard/components/filter-dropdown';
+import FormSelect, {
+  type FormSelectOption,
+} from '@/app/dashboard/components/form-select';
+import PageHeader from '@/app/dashboard/components/page-header';
+import PageAccessModal from './page-access-modal';
 
 const MOCK_USERS = [
-  { id: '101', email: 'manager@example.com', fullName: 'Mike Manager', role: 'MANAGER', designation: 'Senior Manager', department: 'Operations', isActive: true },
-  { id: '102', email: 'purchaser@example.com', fullName: 'Paul Purchaser', role: 'PURCHASER', designation: 'Purchase Officer', department: 'Procurement', isActive: true },
-  { id: '103', email: 'accountant@example.com', fullName: 'Alice Accountant', role: 'ACCOUNTANT', designation: 'Finance Exec', department: 'Finance', isActive: true },
-  { id: '104', email: 'inactive@example.com', fullName: 'Jack Old', role: 'PURCHASER', designation: '-', department: '-', isActive: false },
+  { id: '9998', email: 'manager@example.com', fullName: 'Mike Manager', role: 'MANAGER', baseRole: 'MANAGER', customRoleKey: 'MANAGER', customRoleName: 'Manager', rolePageAccess: null, designation: 'Senior Manager', department: 'Operations', isActive: true },
+  { id: '9997', email: 'purchaser@example.com', fullName: 'Paul Purchaser', role: 'PURCHASER', baseRole: 'PURCHASER', customRoleKey: 'PURCHASER', customRoleName: 'Purchaser', rolePageAccess: null, designation: 'Purchase Officer', department: 'Procurement', isActive: true },
+  { id: '9996', email: 'accountant@example.com', fullName: 'Alice Accountant', role: 'ACCOUNTANT', baseRole: 'ACCOUNTANT', customRoleKey: 'ACCOUNTANT', customRoleName: 'Accountant', rolePageAccess: null, designation: 'Finance Exec', department: 'Finance', isActive: true },
+  { id: '9995', email: 'inactive@example.com', fullName: 'Jack Old', role: 'PURCHASER', baseRole: 'PURCHASER', customRoleKey: 'PURCHASER', customRoleName: 'Purchaser', rolePageAccess: null, designation: '-', department: '-', isActive: false },
 ];
 
-function CreateUserModal({ open, onClose, onSuccess }: any) {
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'PURCHASER', designation: '', department: '' });
+const userRoleFilterOptions: FilterDropdownOption<string>[] = [
+  { value: 'ALL', label: 'All Roles' },
+  { value: 'ADMIN', label: 'Admin' },
+  { value: 'MANAGER', label: 'Manager' },
+  { value: 'PURCHASER', label: 'Purchaser' },
+  { value: 'ACCOUNTANT', label: 'Accountant' },
+];
+
+const userStatusFilterOptions: FilterDropdownOption<string>[] = [
+  { value: 'ALL', label: 'All Status' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'INACTIVE', label: 'Inactive' },
+];
+
+type RoleOption = {
+  key: string;
+  name: string;
+  baseRole: string;
+  pageAccess?: string[] | null;
+};
+
+type DesignationOption = {
+  key: string;
+  name: string;
+  description?: string;
+  department?: string;
+  defaultCustomRoleKey?: string;
+};
+
+const designationPickerBaseOption: FormSelectOption<string> = {
+  value: '',
+  label: 'Select saved designation',
+};
+
+const designationPickerCustomOption: FormSelectOption<string> = {
+  value: '__custom__',
+  label: 'Custom designation',
+};
+
+function CreateUserModal({ open, onClose, onSuccess, roles, designations }: any) {
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    customRoleKey: roles[0]?.key || 'PURCHASER',
+    designationKey: '',
+    designation: '',
+    department: '',
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const set = (k: string) => (e: any) => setForm(f => ({ ...f, [k]: e.target.value }));
+
   if (!open) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,10 +93,24 @@ function CreateUserModal({ open, onClose, onSuccess }: any) {
 
   const inputCls = "w-full bg-slate-950/50 border border-white/5 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500/50 text-sm placeholder:text-slate-600";
   const labelCls = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2";
+  const selectedDesignation = designations.find((designation: DesignationOption) => designation.key === form.designationKey);
+  const isCustomDesignation = form.designationKey === '__custom__';
+  const roleOptions: FormSelectOption<string>[] = roles.map((role: RoleOption) => ({
+    value: role.key,
+    label: `${role.name} (${role.baseRole})`,
+  }));
+  const designationOptions: FormSelectOption<string>[] = [
+    designationPickerBaseOption,
+    ...designations.map((designation: DesignationOption) => ({
+      value: designation.key,
+      label: `${designation.name}${designation.department ? ` (${designation.department})` : ''}`,
+    })),
+    designationPickerCustomOption,
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 w-full max-w-md shadow-2xl animate-fade-in-up max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-slate-900 p-5 shadow-2xl animate-fade-in-up sm:p-6 lg:p-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-slate-100">Add New User</h2>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 text-slate-400"><X size={20} /></button>
@@ -50,14 +122,44 @@ function CreateUserModal({ open, onClose, onSuccess }: any) {
           <div><label className={labelCls}>Password</label><input type="password" value={form.password} onChange={set('password')} required minLength={8} className={inputCls} /></div>
           <div>
             <label className={labelCls}>Role</label>
-            <select value={form.role} onChange={set('role')} className={inputCls}>
-              <option value="PURCHASER">Purchaser (Create Requisitions)</option>
-              <option value="MANAGER">Manager (Approve Requisitions)</option>
-              <option value="ACCOUNTANT">Accountant (Process Payments)</option>
-              <option value="ADMIN">Admin (Manage Organization)</option>
-            </select>
+            <FormSelect
+              value={form.customRoleKey}
+              options={roleOptions}
+              onChange={(value) => setForm((current) => ({ ...current, customRoleKey: value }))}
+            />
           </div>
-          <div><label className={labelCls}>Designation</label><input value={form.designation} onChange={set('designation')} className={inputCls} /></div>
+          <div>
+            <label className={labelCls}>Designation</label>
+            <FormSelect
+              value={form.designationKey}
+              options={designationOptions}
+              onChange={(nextKey) => {
+                const nextDesignation = designations.find((entry: DesignationOption) => entry.key === nextKey);
+                setForm((current) => ({
+                  ...current,
+                  designationKey: nextKey,
+                  customRoleKey:
+                    nextKey === '__custom__'
+                      ? current.customRoleKey
+                      : (nextDesignation?.defaultCustomRoleKey || current.customRoleKey),
+                  designation: nextKey === '__custom__' ? current.designation : '',
+                  department:
+                    current.department || nextKey === '__custom__'
+                      ? current.department
+                      : (nextDesignation?.department || current.department),
+                }));
+              }}
+            />
+            {selectedDesignation?.description ? (
+              <p className="mt-2 text-xs text-slate-500">{selectedDesignation.description}</p>
+            ) : null}
+          </div>
+          {isCustomDesignation ? (
+            <div>
+              <label className={labelCls}>Custom Designation</label>
+              <input value={form.designation} onChange={set('designation')} className={inputCls} />
+            </div>
+          ) : null}
           <div><label className={labelCls}>Department</label><input value={form.department} onChange={set('department')} className={inputCls} /></div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-400 hover:bg-white/5">Cancel</button>
@@ -71,8 +173,75 @@ function CreateUserModal({ open, onClose, onSuccess }: any) {
   );
 }
 
+function RoleAssignModal({ open, user, roles, onClose, onSaved, onToast }: any) {
+  const [selectedRoleKey, setSelectedRoleKey] = useState(user?.customRoleKey || user?.role || '');
+  const [saving, setSaving] = useState(false);
+  const roleOptions: FormSelectOption<string>[] = roles.map((role: RoleOption) => ({
+    value: role.key,
+    label: `${role.name} (${role.baseRole})`,
+  }));
+
+  if (!open || !user) return null;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/users/${user.id}/custom-role`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roleKey: selectedRoleKey }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to update role');
+      onSaved(await res.json());
+      onToast('Custom role updated.', 'success');
+      onClose();
+    } catch (error: any) {
+      onToast(error.message || 'Failed to update role.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900 p-5 shadow-2xl sm:p-6 lg:p-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-slate-100">Assign Custom Role</h2>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 text-slate-400"><X size={20} /></button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">User</p>
+            <p className="mt-1 text-sm text-slate-200">{user.fullName || user.email}</p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Role</label>
+            <FormSelect
+              value={selectedRoleKey}
+              options={roleOptions}
+              onChange={setSelectedRoleKey}
+            />
+          </div>
+        </div>
+        <div className="flex gap-3 pt-6">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-400 hover:bg-white/5">Cancel</button>
+          <button type="button" onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium">
+            {saving ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Save Role'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function UserManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [designations, setDesignations] = useState<DesignationOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,8 +249,9 @@ export default function UserManagementPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [menuUser, setMenuUser] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
-
-  useEffect(() => { loadUsers(); }, []);
+  const [accessUser, setAccessUser] = useState<any>(null);
+  const [roleUser, setRoleUser] = useState<any>(null);
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -92,6 +262,22 @@ export default function UserManagementPage() {
       else setUsers(MOCK_USERS); // bypass fallback
     } catch { setUsers(MOCK_USERS); }
     finally { setLoading(false); }
+  };
+
+  const loadRoles = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/custom-roles', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setRoles(await res.json());
+    } catch { }
+  };
+
+  const loadDesignations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/designations', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setDesignations(await res.json());
+    } catch { }
   };
 
   const execAction = async (userId: string, action: string) => {
@@ -110,7 +296,7 @@ export default function UserManagementPage() {
       const q = searchQuery.toLowerCase();
       const matchSearch = !q || u.fullName?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) ||
         u.department?.toLowerCase().includes(q) || u.designation?.toLowerCase().includes(q);
-      const matchRole = roleFilter === 'ALL' || u.role === roleFilter;
+      const matchRole = roleFilter === 'ALL' || u.baseRole === roleFilter || u.role === roleFilter;
       const matchStatus = statusFilter === 'ALL' || (statusFilter === 'ACTIVE' ? u.isActive : !u.isActive);
       return matchSearch && matchRole && matchStatus;
     });
@@ -126,37 +312,60 @@ export default function UserManagementPage() {
     return `inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full border ${m[role] || ''}`;
   };
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadUsers();
+      void loadRoles();
+      void loadDesignations();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-100">User Management</h1>
-        <button id="btn-add-user" onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-600/20">
-          <Plus size={16} /> Add User
-        </button>
-      </div>
+      {toast && (
+        <ActionToast
+          message={toast.message}
+          tone={toast.tone}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      <PageHeader
+        title="User Management"
+        actions={
+          <button id="btn-add-user" onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-600/20">
+            <Plus size={16} /> Add User
+          </button>
+        }
+      />
 
       {/* Filters */}
       <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-4 flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-64">
+                <div className="relative min-w-0 flex-1 sm:min-w-64">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..."
             className="w-full bg-slate-950/50 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-slate-200 placeholder:text-slate-600" />
         </div>
-        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
-          className="bg-slate-950/50 border border-white/5 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-300">
-          <option value="ALL">All Roles</option>
-          <option value="ADMIN">Admin</option>
-          <option value="MANAGER">Manager</option>
-          <option value="PURCHASER">Purchaser</option>
-          <option value="ACCOUNTANT">Accountant</option>
-        </select>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="bg-slate-950/50 border border-white/5 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-300">
-          <option value="ALL">All Status</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
+        <FilterDropdown
+          label="Role"
+          value={roleFilter}
+          options={userRoleFilterOptions}
+          onChange={setRoleFilter}
+        />
+        <FilterDropdown
+          label="Status"
+          value={statusFilter}
+          options={userStatusFilterOptions}
+          onChange={setStatusFilter}
+        />
       </div>
 
       {/* Table */}
@@ -195,7 +404,7 @@ export default function UserManagementPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-slate-400">{u.email}</td>
-                  <td className="px-6 py-4"><span className={roleBadge(u.role)}>{u.role}</span></td>
+                  <td className="px-6 py-4"><span className={roleBadge(u.baseRole || u.role)}>{u.customRoleName || u.role}</span></td>
                   <td className="px-6 py-4 text-slate-400">{u.designation || '-'}</td>
                   <td className="px-6 py-4 text-slate-400">{u.department || '-'}</td>
                   <td className="px-6 py-4">
@@ -223,6 +432,14 @@ export default function UserManagementPage() {
                                 <CheckCircle size={16} className="text-emerald-400" /> Activate
                               </button>
                           }
+                          <button onClick={() => { setAccessUser(u); setMenuUser(null); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5 rounded-xl">
+                            <ShieldCheck size={16} className="text-indigo-400" /> Page Access
+                          </button>
+                          <button onClick={() => { setRoleUser(u); setMenuUser(null); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5 rounded-xl">
+                            <Edit size={16} className="text-sky-400" /> Custom Role
+                          </button>
                           <button onClick={() => { if (confirm(`Delete ${u.fullName}?`)) execAction(u.id, 'delete'); }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-rose-400 hover:bg-rose-500/10 rounded-xl">
                             <Trash2 size={16} /> Delete User
@@ -238,7 +455,83 @@ export default function UserManagementPage() {
         </div>
       </div>
 
-      <CreateUserModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); loadUsers(); }} />
+      <CreateUserModal
+        key={`create-${createOpen ? 'open' : 'closed'}-${roles.length}-${designations.length}`}
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        roles={roles}
+        designations={designations}
+        onSuccess={() => { setCreateOpen(false); loadUsers(); }}
+      />
+      <PageAccessModal
+        key={`${accessUser?.id ?? 'closed'}-${accessUser?.pageAccess?.join(',') ?? 'default'}`}
+        open={!!accessUser}
+        user={accessUser}
+        onClose={() => setAccessUser(null)}
+        onToast={(message, tone = 'success') => setToast({ message, tone })}
+        onSaved={(pageAccess) => {
+          const rawUser = window.localStorage.getItem('user');
+          if (rawUser && accessUser?.id) {
+            try {
+              const storedUser = JSON.parse(rawUser);
+              if (String(storedUser.id) === String(accessUser.id)) {
+                window.localStorage.setItem('user', JSON.stringify({ ...storedUser, pageAccess }));
+              }
+            } catch {
+              // Keep dashboard working even if local storage user is malformed.
+            }
+          }
+
+          setUsers((current) =>
+            current.map((entry) =>
+              entry.id === accessUser?.id ? { ...entry, pageAccess } : entry,
+            ),
+          );
+        }}
+      />
+      <RoleAssignModal
+        key={`role-${roleUser?.id ?? 'closed'}-${roleUser?.customRoleKey ?? roleUser?.role ?? 'none'}`}
+        open={!!roleUser}
+        user={roleUser}
+        roles={roles}
+        onClose={() => setRoleUser(null)}
+        onToast={(message: string, tone: 'success' | 'error' = 'success') => setToast({ message, tone })}
+        onSaved={(payload: any) => {
+          const rawUser = window.localStorage.getItem('user');
+          if (rawUser && roleUser?.id) {
+            try {
+              const storedUser = JSON.parse(rawUser);
+              if (String(storedUser.id) === String(roleUser.id)) {
+                window.localStorage.setItem('user', JSON.stringify({
+                  ...storedUser,
+                  role: payload.baseRole || storedUser.role,
+                  baseRole: payload.baseRole || storedUser.baseRole,
+                  customRoleKey: payload.customRoleKey,
+                  customRoleName: payload.customRoleName,
+                  rolePageAccess: payload.rolePageAccess,
+                }));
+              }
+            } catch {
+              // Keep current session working even if local storage is malformed.
+            }
+          }
+
+          setUsers((current) =>
+            current.map((entry) =>
+              entry.id === roleUser?.id
+                ? {
+                    ...entry,
+                    role: payload.baseRole || entry.role,
+                    baseRole: payload.baseRole || entry.baseRole,
+                    customRoleKey: payload.customRoleKey,
+                    customRoleName: payload.customRoleName,
+                    rolePageAccess: payload.rolePageAccess,
+                  }
+                : entry,
+            ),
+          );
+        }}
+      />
     </div>
   );
 }

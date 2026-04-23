@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Requisition App (Next.js Version)
+
+A modern, full-stack Requisition Management System built with Next.js, featuring a premium glassmorphic UI and robust role-based access control.
+
+## Architecture
+
+- **Framework**: [Next.js 16](https://nextjs.org) (App Router)
+- **Language**: TypeScript
+- **Database**: PostgreSQL with [Prisma ORM](https://www.prisma.io/)
+- **Styling**: Vanilla CSS + [Tailwind CSS](https://tailwindcss.com) 
+- **Icons**: [Lucide React](https://lucide.dev)
+- **Authentication**: JWT-based session management
+- **Security**: Argon2/Bcrypt password hashing
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18.17 or later
+- PostgreSQL (or use the built-in dev-bypass store for testing)
+
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repo-url>
+   cd requisition-app-next
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**:
+   Create a `.env` file in the root directory:
+   ```env
+   DATABASE_URL="postgresql://user:password@localhost:5432/requisition_db"
+   JWT_SECRET="your-super-secret-key"
+   ```
+
+4. **Initialize Database** (Optional):
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+### Running Locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Role-based Access Control (RBAC)**
+  - **Purchaser**: Creates/submits requisitions, uploads bills/material proofs, marks as dispatched.
+  - **Manager**: Processes approvals (Approve / Reject / Hold / To Review) with notes.
+  - **Accountant**: Updates payment status (Done / Partial / Not Done), UTR numbers, and uploads payment proof.
+  - **Admin**: Full system management, user administration, and bulk delete capabilities.
 
-## Learn More
+- **Status Timeline**
+  - Real-time visualization of the requisition lifecycle: **Submitted → Approved → Paid → Dispatched**.
+  - Detailed audit logs including who performed each action and when.
 
-To learn more about Next.js, take a look at the following resources:
+- **Advanced Attachment Handling**
+  - **Instant Local Previews**: Immediate visual feedback for uploads using Blob URLs.
+  - **Persistent Storage**: Files are saved to `public/uploads/` and served as static assets.
+  - Supports: Bills/Invoices, Vendor QR/Payment details, Payment Proof, and Material Proof.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Aesthetic Dashboard**
+  - Premium Glassmorphism design system.
+  - Compact Stat Cards with horizontal layout for better space utilization.
+  - Clickable Table Rows with deep linking on Request IDs.
+  - Advanced search and multi-layer filtering.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## User Guide
 
-## Deploy on Vercel
+### 1. Typical Workflow
+- **Purchaser**: Dashboard → New Requisition → Fill Details → Submit.
+- **Manager**: View Requisition → Process Approval → Set Status + Notes.
+- **Accountant**: View Requisition → Update Payment → Enter UTR/Amount → Upload Proof.
+- **Purchaser**: View Requisition → Mark as Dispatched → Upload final proofs.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. Available Test Accounts
+- **Admin**: `admin@example.com` / `password123`
+- **Manager**: `manager@example.com` / `password123`
+- **Purchaser**: `purchaser@example.com` / `password123`
+- **Accountant**: `accountant@example.com` / `password123`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+*This project is a migration of the original Spring Boot / React Requisition App.*
