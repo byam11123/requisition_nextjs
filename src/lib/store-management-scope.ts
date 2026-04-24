@@ -1,4 +1,4 @@
-import { findDevUserById } from "@/lib/dev-auth-store";
+import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { prisma } from "@/lib/prisma";
 
 const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
@@ -28,3 +28,4 @@ export async function resolveStoreOrganizationScope(userId: string) {
     source: "db" as const,
   };
 }
+

@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { Upload, ZoomIn } from "lucide-react";
+import { useState } from "react";
+import ImagePreviewModal from "@/components/ui/image-preview-modal";
 
 type AttachmentCardProps = {
   title: string;
@@ -24,17 +26,18 @@ export default function AttachmentCard({
   previewClassName = "h-24",
   imageClassName = "object-contain",
 }: AttachmentCardProps) {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const displayUrl = localUrl || url;
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-white/5 p-3">
-      <p className="text-center text-xs font-medium text-slate-500">{title}</p>
+    <div className="flex flex-col gap-2 rounded-2xl border border-[var(--app-border)] p-3 bg-[var(--app-panel)]/30 transition-all hover:bg-[var(--app-panel)]/50">
+      <p className="text-center text-[11px] font-bold uppercase tracking-wider text-[var(--app-muted)]">{title}</p>
 
       {displayUrl ? (
         <button
           type="button"
-          className={`group relative overflow-hidden rounded-xl bg-slate-950/50 ${previewClassName}`}
-          onClick={() => window.open(displayUrl, "_blank")}
+          className={`group relative overflow-hidden rounded-xl bg-black/20 ${previewClassName}`}
+          onClick={() => setIsPreviewOpen(true)}
         >
           <Image
             src={displayUrl}
@@ -49,16 +52,16 @@ export default function AttachmentCard({
         </button>
       ) : (
         <div
-          className={`flex items-center justify-center rounded-xl bg-slate-950/30 text-xs text-slate-600 ${previewClassName}`}
+          className={`flex items-center justify-center rounded-xl bg-black/10 text-sm italic text-[var(--app-muted)]/60 ${previewClassName}`}
         >
           {emptyLabel}
         </div>
       )}
 
       {canUpload ? (
-        <label className="flex cursor-pointer items-center justify-center gap-1 text-xs text-slate-500 transition-colors hover:text-indigo-400">
-          <Upload size={12} />
-          {displayUrl ? "Replace" : "Upload"}
+        <label className="flex cursor-pointer items-center justify-center gap-2 text-xs font-semibold text-[var(--app-muted)] transition-colors hover:text-[var(--app-accent)] mt-1">
+          <Upload size={13} className="shrink-0" />
+          <span>{displayUrl ? "Replace" : "Upload"}</span>
           <input
             type="file"
             className="hidden"
@@ -67,6 +70,15 @@ export default function AttachmentCard({
           />
         </label>
       ) : null}
+
+      {displayUrl && (
+        <ImagePreviewModal
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          imageUrl={displayUrl}
+          title={title}
+        />
+      )}
     </div>
   );
 }

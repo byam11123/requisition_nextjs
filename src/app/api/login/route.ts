@@ -6,10 +6,10 @@ import {
   findDevUserByEmail,
   updateDevUserLastLogin,
   verifyDevUserPassword,
-} from "@/lib/dev-auth-store";
+} from "@/lib/stores/dev-auth-store";
 import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
-import { getUserPageAccess } from "@/lib/user-page-access-store";
+import { getUserPageAccess } from "@/lib/stores/user-page-access-store";
 
 const DEV_USERS: Record<string, { id: string; fullName: string; role: string }> = {
   "admin@example.com": { id: "9999", fullName: "Test Admin", role: "ADMIN" },
@@ -172,3 +172,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

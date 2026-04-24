@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PaymentStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { hydrateDemoModuleGlobals } from '@/lib/demo-module-store';
-import { findDevUserById } from '@/lib/dev-auth-store';
+import { hydrateDemoModuleGlobals } from '@/lib/stores/demo-module-store';
+import { findDevUserById } from '@/lib/stores/dev-auth-store';
 import { getEffectiveRoleContext } from '@/lib/effective-role-context';
-import { canRunRequisitionWorkflowStep } from '@/lib/requisition-workflow-config';
+import { canRunRequisitionWorkflowStep } from '@/lib/config/requisition-workflow-config';
 import {
   getRequisitionWorkflowConfig,
   getRequisitionWorkflowOrganizationScope,
-} from '@/lib/requisition-workflow-store';
+} from '@/lib/stores/requisition-workflow-store';
 
 hydrateDemoModuleGlobals();
 

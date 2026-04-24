@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { findDevUserById } from "@/lib/dev-auth-store";
-import { hydrateDemoModuleGlobals } from "@/lib/demo-module-store";
+import { findDevUserById } from "@/lib/stores/dev-auth-store";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { prisma } from "@/lib/prisma";
 
 declare global {
@@ -172,7 +172,7 @@ export async function GET(
           ...record,
           createdBy: { fullName: record.createdByName || "" },
           approvedBy: { fullName: record.approvedByName || "" },
-        }),
+        } as unknown as VehicleFuelRow),
       );
     }
 
@@ -280,7 +280,7 @@ export async function PUT(
           ...store[index],
           createdBy: { fullName: store[index].createdByName || "" },
           approvedBy: { fullName: store[index].approvedByName || "" },
-        }),
+        } as unknown as VehicleFuelRow),
       );
     }
 

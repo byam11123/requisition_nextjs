@@ -5,7 +5,7 @@ import type {
   StoreLocation,
   StoreLocationType,
   StoreStockEntry,
-} from "@/lib/store-management-store";
+} from "@/lib/stores/store-management-store";
 
 export type { StoreItem, StoreLocation, StoreLocationType, StoreStockEntry };
 
@@ -96,3 +96,4 @@ export function getLocationTypeClasses(type: StoreLocationType) {
   }
   return "bg-slate-500/10 text-slate-300 border-slate-500/20";
 }
+

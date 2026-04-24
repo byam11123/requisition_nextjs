@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth";
-import { hydrateDemoModuleGlobals } from "@/lib/demo-module-store";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 
 declare global {
   interface BigInt {

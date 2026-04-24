@@ -350,3 +350,15 @@ export function updateStoreItemImage(
   persistState();
   return normalizeStoreItem(orgState.items[index]);
 }
+
+export function deleteStoreLocation(organizationId: string, locationKey: string) {
+  const orgState = ensureOrganizationState(organizationId);
+  const index = orgState.locations.findIndex((entry) => entry.key === locationKey);
+  if (index === -1) {
+    return false;
+  }
+
+  orgState.locations.splice(index, 1);
+  persistState();
+  return true;
+}

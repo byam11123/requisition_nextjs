@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { getCustomRolesForOrganization } from "@/lib/custom-role-store";
+import { getCustomRolesForOrganization } from "@/lib/stores/custom-role-store";
 import {
   getDesignationsForOrganization,
   saveDesignationsForOrganization,
-} from "@/lib/designation-store";
+} from "@/lib/stores/designation-store";
 import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 
 export async function PUT(

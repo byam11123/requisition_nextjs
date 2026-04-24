@@ -4,11 +4,13 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import {
   ArrowLeft,
+  CheckCircle2,
   ChevronRight,
   Loader2,
   Plus,
   ReceiptText,
   X,
+  XCircle,
 } from "lucide-react";
 
 import StatusTimeline, { type TimelineEvent } from "@/app/dashboard/status-timeline";
@@ -22,7 +24,7 @@ import {
   formatSalaryCurrency,
   getSalaryAdvanceStatusTone,
 } from "../salary-advance-data";
-import StatusChip from "@/app/dashboard/components/status-chip";
+import StatusChip from "@/components/ui/status-chip";
 
 function AddDeductionModal({
   open,
@@ -47,12 +49,12 @@ function AddDeductionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-slate-900 p-5 sm:p-6 lg:p-8">
+      <div className="w-full max-w-lg rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-5 sm:p-6 lg:p-8">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-100">Add Deduction</h2>
+          <h2 className="text-xl font-semibold text-[var(--app-text)]">Add Deduction</h2>
           <button
             onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-white/5"
+            className="rounded-xl p-2 text-[var(--app-muted)] transition-colors hover:bg-[var(--app-accent-soft)]"
           >
             <X size={18} />
           </button>
@@ -60,18 +62,18 @@ function AddDeductionModal({
 
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
               Deduction Date
             </label>
             <input
               type="date"
               value={deductionDate}
               onChange={(event) => setDeductionDate(event.target.value)}
-              className="w-full rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 outline-none transition-colors focus:border-indigo-500/50"
+              className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] px-4 py-3 text-sm text-[var(--app-text)] outline-none transition-colors focus:border-[var(--app-accent-border)]"
             />
           </div>
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
               Deduction Amount
             </label>
             <input
@@ -79,17 +81,17 @@ function AddDeductionModal({
               min="0"
               value={deductionAmount}
               onChange={(event) => setDeductionAmount(event.target.value)}
-              className="w-full rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 outline-none transition-colors focus:border-indigo-500/50"
+              className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] px-4 py-3 text-sm text-[var(--app-text)] outline-none transition-colors focus:border-[var(--app-accent-border)]"
             />
           </div>
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
               Remark
             </label>
             <input
               value={remark}
               onChange={(event) => setRemark(event.target.value)}
-              className="w-full rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 outline-none transition-colors focus:border-indigo-500/50"
+              className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] px-4 py-3 text-sm text-[var(--app-text)] outline-none transition-colors focus:border-[var(--app-accent-border)]"
             />
           </div>
         </div>
@@ -97,7 +99,7 @@ function AddDeductionModal({
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
             onClick={onClose}
-            className="flex-1 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5"
+            className="flex-1 rounded-xl border border-[var(--app-border)] px-4 py-2.5 text-sm text-[var(--app-muted)] transition-colors hover:bg-[var(--app-accent-soft)]"
           >
             Cancel
           </button>
@@ -121,6 +123,18 @@ function AddDeductionModal({
   );
 }
 
+function getStoredRole() {
+  if (typeof window === "undefined") return "";
+  const rawUser = localStorage.getItem("user");
+  if (!rawUser) return "";
+  try {
+    const parsed = JSON.parse(rawUser) as { role?: string };
+    return String(parsed.role || "").toUpperCase().trim();
+  } catch {
+    return "";
+  }
+}
+
 export default function SalaryAdvanceDetailPage({
   params,
 }: {
@@ -128,9 +142,64 @@ export default function SalaryAdvanceDetailPage({
 }) {
   const { id } = use(params);
   const [record, setRecord] = useState<SalaryAdvanceRecord | null>(null);
+  const [userRole] = useState(() => getStoredRole());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [actionLoading, setActionLoading] = useState<"APPROVED" | "REJECTED" | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const handleApproval = async (status: "APPROVED" | "REJECTED") => {
+    setActionLoading(status);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/salary-advance/${id}/approve`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || "Salary advance approval failed");
+      }
+
+      const updated = (await response.json()) as Pick<
+        SalaryAdvanceRecord,
+        "status" | "approvedAt" | "approvedByName"
+      >;
+      setRecord((current) =>
+        current
+          ? {
+              ...current,
+              status: updated.status,
+              approvedAt: updated.approvedAt || null,
+              approvedByName: updated.approvedByName || null,
+            }
+          : current,
+      );
+      setToast({
+        type: "success",
+        message: status === "APPROVED" ? "Advance approved." : "Advance rejected.",
+      });
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "Approval failed",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   useEffect(() => {
     const fetchRecord = async () => {
@@ -257,8 +326,21 @@ export default function SalaryAdvanceDetailPage({
     },
   ];
 
+  const canReview = userRole === "MANAGER" && record.status === "PENDING";
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 animate-fade-in-up">
+      {toast && (
+        <div
+          className={`fixed right-5 top-5 z-50 rounded-xl border px-4 py-2.5 text-sm shadow-lg ${
+            toast.type === "success"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+              : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
       <Link
         href="/dashboard/salary-advance"
         className="inline-flex items-center gap-2 text-sm text-indigo-400 transition-colors hover:text-indigo-300"
@@ -268,14 +350,14 @@ export default function SalaryAdvanceDetailPage({
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="min-w-0 flex-1 space-y-6">
-          <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-8">
+          <div className="rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-8">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-slate-500">
+                <p className="mb-1 text-xs uppercase tracking-wider text-[var(--app-muted)]">
                   Request ID
                 </p>
-                <h1 className="text-2xl font-bold text-slate-100">{record.requestId}</h1>
-                <p className="mt-1 text-sm text-slate-400">
+                <h1 className="text-2xl font-bold text-[var(--app-text)]">{record.requestId}</h1>
+                <p className="mt-1 text-sm text-[var(--app-muted)]">
                   Entry Timestamp: {formatSalaryAdvanceDate(record.entryTimestamp)}
                 </p>
               </div>
@@ -330,20 +412,20 @@ export default function SalaryAdvanceDetailPage({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/5 bg-slate-900/50 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
+          <div className="rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[var(--app-border)] px-6 py-4">
               <div className="flex items-center gap-2">
-                <ReceiptText size={18} className="text-slate-300" />
-                <h2 className="text-lg font-semibold text-slate-100">
+                <ReceiptText size={18} className="text-[var(--app-muted)]" />
+                <h2 className="text-lg font-semibold text-[var(--app-text)]">
                   Deduction History
                 </h2>
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-slate-300">
+                <span className="rounded-full bg-[var(--app-accent-soft)] px-2 py-0.5 text-[10px] text-[var(--app-accent-strong)]">
                   {record.deductionHistory.length}
                 </span>
               </div>
               <button
                 onClick={() => setModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-muted)] transition-colors hover:bg-[var(--app-accent-soft)]"
               >
                 <Plus size={14} />
                 Add
@@ -352,7 +434,7 @@ export default function SalaryAdvanceDetailPage({
 
             <div className="overflow-x-auto">
               <table className="w-full whitespace-nowrap text-left text-sm">
-                <thead className="border-b border-white/5 text-xs uppercase tracking-wider text-slate-500">
+                <thead className="border-b border-[var(--app-border)] text-xs uppercase tracking-wider text-[var(--app-muted)]">
                   <tr>
                     <th className="px-6 py-3">Deduction Date</th>
                     <th className="px-6 py-3">Deduction Amount</th>
@@ -363,22 +445,22 @@ export default function SalaryAdvanceDetailPage({
                 <tbody className="divide-y divide-white/5">
                   {record.deductionHistory.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-10 text-center text-slate-500">
+                      <td colSpan={4} className="px-6 py-10 text-center text-[var(--app-muted)]">
                         No deduction entries yet. Add deductions only after the
                         request is created.
                       </td>
                     </tr>
                   ) : (
                     record.deductionHistory.map((entry) => (
-                      <tr key={entry.id}>
-                        <td className="px-6 py-4 text-slate-300">
+                      <tr key={entry.id} className="hover:bg-[var(--app-panel)]/40 transition-colors">
+                        <td className="px-6 py-4 text-[var(--app-muted)]">
                           {formatSalaryAdvanceDate(entry.deductionDate)}
                         </td>
-                        <td className="px-6 py-4 text-slate-100">
+                        <td className="px-6 py-4 text-[var(--app-text)] font-medium">
                           {formatSalaryCurrency(entry.deductionAmount)}
                         </td>
-                        <td className="px-6 py-4 text-slate-300">{entry.remark}</td>
-                        <td className="px-6 py-4 text-right text-slate-500">
+                        <td className="px-6 py-4 text-[var(--app-muted)]">{entry.remark}</td>
+                        <td className="px-6 py-4 text-right text-[var(--app-muted)]">
                           <ChevronRight size={16} className="ml-auto" />
                         </td>
                       </tr>
@@ -391,6 +473,36 @@ export default function SalaryAdvanceDetailPage({
         </div>
 
         <div className="w-full shrink-0 space-y-6 lg:w-80">
+          <div className="rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-6">
+            <h3 className="mb-4 text-base font-semibold text-[var(--app-text)]">Actions</h3>
+            {canReview ? (
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleApproval("APPROVED")}
+                  disabled={actionLoading !== null}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <CheckCircle2 size={16} />
+                  {actionLoading === "APPROVED" ? "Approving..." : "Approve Advance"}
+                </button>
+                <button
+                  onClick={() => handleApproval("REJECTED")}
+                  disabled={actionLoading !== null}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <XCircle size={16} />
+                  {actionLoading === "REJECTED" ? "Rejecting..." : "Reject Advance"}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--app-muted)]">
+                {record.status === "PENDING"
+                  ? "Only managers can approve or reject salary advances."
+                  : "Advance review has already been completed."}
+              </p>
+            )}
+          </div>
+
           <StatusTimeline events={timelineEvents} />
         </div>
       </div>

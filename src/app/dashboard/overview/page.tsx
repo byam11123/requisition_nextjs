@@ -21,8 +21,8 @@ import {
 
 import ActionToast from "@/app/dashboard/action-toast";
 import PageHeader from "@/app/dashboard/components/page-header";
-import StatCard from "@/app/dashboard/components/stat-card";
-import { canAccessDashboardPath } from "@/lib/page-access";
+import StatCard from "@/components/ui/stat-card";
+import { canAccessDashboardPath } from "@/lib/config/page-access";
 
 type StoredUser = {
   role?: string;
@@ -39,10 +39,10 @@ type SummaryCardData = {
 };
 
 type ModuleStat = {
-  key: "requisitions" | "repair" | "attendance" | "salaryAdvance";
+  key: "requisitions" | "repair" | "attendance" | "salaryAdvance" | "vehicleFuel" | "store";
   label: string;
   href: string;
-  tone: "indigo" | "emerald" | "amber" | "purple";
+  tone: "indigo" | "emerald" | "amber" | "purple" | "sky" | "rose";
   total: number;
   pending: number;
   completed: number;
@@ -55,6 +55,8 @@ type TrendPoint = {
   repair: number;
   attendance: number;
   salaryAdvance: number;
+  vehicleFuel: number;
+  store: number;
 };
 
 type SiteBreakdown = {
@@ -273,6 +275,8 @@ const moduleColors: Record<string, string> = {
   repair: "bg-emerald-400",
   attendance: "bg-amber-400",
   salaryAdvance: "bg-purple-400",
+  vehicleFuel: "bg-sky-400",
+  store: "bg-rose-400",
 };
 
 export default function OverviewDashboardPage() {
@@ -465,7 +469,7 @@ export default function OverviewDashboardPage() {
         {
           label: "Total Records",
           value: summary.summaryCards.totalRecords,
-          helper: "Across requisition, repair, attendance, and salary modules",
+          helper: "Across requisition, repair, vehicle fuel, and store modules",
           tone: "indigo",
           icon: LayoutDashboard,
         },
@@ -504,6 +508,8 @@ export default function OverviewDashboardPage() {
         point.repair,
         point.attendance,
         point.salaryAdvance,
+        point.vehicleFuel,
+        point.store,
       ]),
     );
 
@@ -574,6 +580,14 @@ export default function OverviewDashboardPage() {
                   <span className="h-2.5 w-2.5 rounded-full bg-purple-400" />
                   Salary
                 </span>
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
+                  Fuel
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                  Inventory
+                </span>
               </div>
             </div>
 
@@ -586,6 +600,8 @@ export default function OverviewDashboardPage() {
                       { key: "repair", value: point.repair },
                       { key: "attendance", value: point.attendance },
                       { key: "salaryAdvance", value: point.salaryAdvance },
+                      { key: "vehicleFuel", value: point.vehicleFuel },
+                      { key: "store", value: point.store },
                     ].map((bar) => (
                       <div
                         key={bar.key}
@@ -1004,7 +1020,7 @@ export default function OverviewDashboardPage() {
             value={loading ? "..." : card.value.toLocaleString("en-IN")}
             helper={card.helper}
             icon={card.icon}
-            tone={card.tone}
+            tone={card.tone as any}
           />
         ))}
       </div>

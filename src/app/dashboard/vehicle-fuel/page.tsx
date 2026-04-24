@@ -22,8 +22,8 @@ import {
 } from "./vehicle-fuel-data";
 import FilterDropdown, {
   type FilterDropdownOption,
-} from "@/app/dashboard/components/filter-dropdown";
-import ActionIconButton from "@/app/dashboard/components/action-icon-button";
+} from "@/components/ui/filter-dropdown";
+import ActionIconButton from "@/components/ui/action-icon-button";
 import ExportMenu from "@/app/dashboard/components/export-menu";
 import {
   downloadRegisterCsv,
@@ -31,8 +31,8 @@ import {
 } from "@/app/dashboard/components/export-utils";
 import PageHeader from "@/app/dashboard/components/page-header";
 import RegisterTableShell from "@/app/dashboard/components/register-table-shell";
-import StatusChip from "@/app/dashboard/components/status-chip";
-import StatCard from "@/app/dashboard/components/stat-card";
+import StatusChip from "@/components/ui/status-chip";
+import StatCard from "@/components/ui/stat-card";
 
 export default function VehicleFuelPage() {
   const [rows, setRows] = useState<VehicleFuelRecord[]>([]);
@@ -272,25 +272,25 @@ export default function VehicleFuelPage() {
             title={card.title}
             value={card.value}
             icon={card.icon}
-            tone={card.color}
+            tone={card.color as any}
             active={activeStatFilter === card.filter}
             onClick={() => setActiveStatFilter(card.filter)}
           />
         ))}
       </div>
 
-      <div className="rounded-2xl border border-white/5 bg-slate-900/50 p-4">
+      <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
             <Search
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-muted)]"
             />
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search by request ID, vehicle, RC number, requester or fuel type..."
-              className="w-full rounded-xl border border-white/5 bg-slate-950/50 py-2.5 pl-9 pr-4 text-sm text-slate-200 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500/50"
+              className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] py-2.5 pl-9 pr-4 text-sm text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-muted)]/50 focus:border-[var(--app-accent-border)]"
             />
           </div>
           <FilterDropdown
@@ -313,7 +313,7 @@ export default function VehicleFuelPage() {
         totalCount={filteredRows.length}
       >
           <table className="w-full whitespace-nowrap text-left text-sm">
-            <thead className="bg-slate-950/50 text-xs uppercase tracking-wider text-slate-500">
+            <thead className="bg-[var(--app-panel)]/80 text-xs uppercase tracking-wider text-[var(--app-muted)]">
               <tr>
                 <th className="px-4 py-3">
                   <input
@@ -325,7 +325,7 @@ export default function VehicleFuelPage() {
                       }
                     }}
                     onChange={toggleAll}
-                    className="rounded border-white/10 bg-slate-800"
+                    className="rounded border-[var(--app-border-strong)] bg-[var(--app-bg-secondary)]"
                   />
                 </th>
                 <th className="px-4 py-3">Request ID</th>

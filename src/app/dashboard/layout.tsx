@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { LayoutDashboard, Wrench, CalendarCheck2, HandCoins, FilePlus, Users, User, LogOut, Loader2, ChevronLeft, LucideIcon, ReceiptText, Settings2, ShieldCheck, BriefcaseBusiness, PhoneCall, Fuel, Boxes, Menu } from 'lucide-react';
+import { LayoutDashboard, Wrench, CalendarCheck2, HandCoins, FilePlus, Users, User, LogOut, Loader2, ChevronLeft, LucideIcon, Palette, ReceiptText, Settings2, ShieldCheck, BriefcaseBusiness, PhoneCall, Fuel, Boxes, Menu } from 'lucide-react';
 import Link from 'next/link';
 
-import AppFooter from '@/app/app-footer';
+import AppFooter from '@/components/common/app-footer';
 import AccessDenied from './access-denied';
-import ThemeSwitcher from './components/theme-switcher';
-import { canAccessDashboardPath, getDefaultDashboardPath } from '@/lib/page-access';
+
+import { canAccessDashboardPath, getDefaultDashboardPath } from '@/lib/config/page-access';
+import UserNav from './components/layout/user-nav';
+import { ThemeSwitcher } from '@/components/theme';
+import { APP_THEMES } from '@/components/theme/theme-config';
+
+
 
 type DashboardUser = {
   role?: string;
@@ -38,12 +43,15 @@ function getStoredUser() {
   }
 }
 
+type ThemeOptionKey = (typeof APP_THEMES)[number]["key"];
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [user, setUser] = useState<DashboardUser | null>(null);
-  const [authReady, setAuthReady] = useState(false);
+   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+   const [user, setUser] = useState<DashboardUser | null>(null);
+   const [authReady, setAuthReady] = useState(false);
+
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -131,7 +139,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="block truncate text-sm font-medium">{label}</span>
           </div>
         ) : (
-          <span className="block h-5 max-w-full overflow-hidden text-center text-[9px] font-medium leading-[1.05] text-[var(--app-muted)] group-hover:text-[var(--app-text)]">
+          <span className="block h-5 max-w-full overflow-hidden text-center text-[11px] font-medium leading-[1.05] text-[var(--app-muted)] group-hover:text-[var(--app-text)]">
             {label}
           </span>
         )}
@@ -145,7 +153,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     return (
-      <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">
+      <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">
         {label}
       </p>
     );
@@ -162,53 +170,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       ) : null}
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col border-r border-[var(--app-border)] bg-[var(--app-surface)] backdrop-blur-xl transition-all duration-300 lg:relative lg:z-auto ${
-          isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:translate-x-0 lg:w-22'
-        }`}
-        style={{
-          backgroundImage: 'var(--app-sidebar-wash)',
-        }}
-      >
+       {/* Sidebar */}
+       <aside
+         className={`fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col border-r border-[var(--app-border)] bg-[var(--app-surface)] backdrop-blur-xl transition-all duration-300 lg:relative lg:z-auto ${
+           isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:translate-x-0 lg:w-22'
+         }`}
+         style={{
+           backgroundImage: 'var(--app-sidebar-wash)',
+         }}
+       >
         {/* Toggle Button with larger hit area so expand/collapse feels reliable */}
         <div className="absolute right-0 top-6 z-50 hidden translate-x-1/2 p-2 lg:block">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--app-border-strong)] bg-[var(--app-surface-strong)] text-[var(--app-muted)] shadow-md transition-all hover:border-[var(--app-accent-border)] hover:bg-[var(--app-accent)] hover:text-white focus:outline-none"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--app-border-strong)] bg-[var(--app-surface-strong)] text-[var(--app-muted)] shadow-xl transition-all hover:border-[var(--app-accent-border)] hover:bg-[var(--app-accent)] hover:text-white focus:outline-none ring-4 ring-[var(--app-bg)]/50"
             title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           >
             <ChevronLeft
-              size={14}
-              className={`transition-transform duration-300 ${!isSidebarOpen ? 'rotate-180' : ''}`}
+              size={18}
+              className={`mt-0.5 transition-transform duration-300 ${!isSidebarOpen ? 'rotate-180' : ''}`}
             />
           </button>
         </div>
 
-        <div className={`border-b border-[var(--app-border)] ${isSidebarOpen ? 'px-5 py-5' : 'flex justify-center px-0 py-5'}`}>
-          <div className={`flex items-center ${isSidebarOpen ? 'gap-3' : 'justify-center'}`}>
-            <div className={`rounded-2xl flex items-center justify-center shrink-0 shadow-lg
-            ${isSidebarOpen ? 'w-11 h-11' : 'w-12 h-12'}`}>
-              <div
-                className="flex h-full w-full items-center justify-center rounded-2xl"
-                style={{
-                  background: `linear-gradient(135deg, var(--app-logo-start), var(--app-logo-end))`,
-                  boxShadow: `0 16px 40px color-mix(in srgb, var(--app-accent) 24%, transparent)`,
-                }}
-              >
-                <span className="font-bold text-white text-sm">RH</span>
-              </div>
-            </div>
-            {isSidebarOpen && (
-              <div className="min-w-0">
-                <p className="truncate text-base font-bold text-[var(--app-text)]">Requisition Hub</p>
-                <p className="truncate text-xs uppercase tracking-[0.2em] text-[var(--app-muted)]">Operations Panel</p>
-              </div>
-            )}
-          </div>
-        </div>
+         <div className={`border-b border-[var(--app-border)] ${isSidebarOpen ? 'px-5 py-5' : 'flex justify-center px-0 py-5'}`}>
+           <div className={`flex items-center ${isSidebarOpen ? 'gap-3' : 'justify-center'}`}>
+             <div className={`rounded-2xl flex items-center justify-center shrink-0 shadow-lg
+             ${isSidebarOpen ? 'w-11 h-11' : 'w-12 h-12'}`}>
+               <div
+                 className="flex h-full w-full items-center justify-center rounded-2xl"
+                 style={{
+                   background: `linear-gradient(135deg, var(--app-logo-start), var(--app-logo-end))`,
+                   boxShadow: `0 16px 40px color-mix(in srgb, var(--app-accent) 24%, transparent)`,
+                 }}
+               >
+                 <span className="font-bold text-white text-sm">RH</span>
+               </div>
+             </div>
+             {isSidebarOpen && (
+               <div className="min-w-0">
+                 <p className="truncate text-base font-bold text-[var(--app-text)]">Requisition Hub</p>
+                 <p className="truncate text-xs uppercase tracking-[0.2em] text-[var(--app-muted)]">Operations Panel</p>
+               </div>
+             )}
+           </div>
+         </div>
 
-        <nav className={`flex-1 overflow-y-auto py-5 ${isSidebarOpen ? 'px-4' : 'px-3'}`}>
+
+         <nav className={`flex-1 min-h-0 overflow-y-auto py-5 ${isSidebarOpen ? 'px-4' : 'px-3'} scrollbar-thin scrollbar-track-[var(--app-surface)] scrollbar-thumb-[var(--app-muted)] hover:scrollbar-thumb-[var(--app-text)]`}>
           {sectionLabel('Modules')}
           <div className="space-y-2">
             {canAccessDashboardPath('/dashboard/overview', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/overview', 'Dashboard', LayoutDashboard)}
@@ -245,45 +254,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </>
           )}
+          {isSidebarOpen && (
+            <>
+              <div className="mt-8" />
+              {sectionLabel('Aesthetics')}
+              <div className="px-1.5 flex justify-center">
+                <ThemeSwitcher compact />
+              </div>
+            </>
+          )}
         </nav>
 
-        <div className="border-t border-[var(--app-border)] p-4">
-          {isSidebarOpen ? (
-            <>
-              <div className="mb-4">
-                <ThemeSwitcher />
-              </div>
-              <div className="mb-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-panel)] p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--app-border-strong)] bg-[var(--app-surface-strong)]">
-                    <span className="text-sm font-semibold text-[var(--app-muted)]">{user.fullName?.[0] || user.email?.[0]?.toUpperCase()}</span>
-                  </div>
-                  <div className="min-w-0 overflow-hidden">
-                    <p className="truncate text-sm font-medium text-[var(--app-text)]">{user.fullName || user.email}</p>
-                    <p className="truncate text-xs uppercase tracking-[0.2em] text-[var(--app-muted)]">{user.customRoleName || user.role}</p>
-                  </div>
-                </div>
-              </div>
-              <button onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm text-rose-400 transition-colors hover:bg-rose-500/10">
-                <LogOut size={16} />
-                Logout
-              </button>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-3">
-              <ThemeSwitcher compact />
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--app-border-strong)] bg-[var(--app-surface-strong)]" title={`${user.fullName || user.email} (${user.role})`}>
-                <span className="text-sm font-semibold text-[var(--app-muted)]">{user.fullName?.[0] || user.email?.[0]?.toUpperCase()}</span>
-              </div>
-              <button onClick={handleLogout}
-                title="Logout"
-                className="rounded-xl p-2 text-rose-400 transition-colors hover:bg-rose-500/10">
-                <LogOut size={20} />
-              </button>
-            </div>
-          )}
-        </div>
+
+        <div className="border-t border-[var(--app-border)] p-4 pt-2">
+            <UserNav 
+              user={user} 
+              isSidebarOpen={isSidebarOpen} 
+              onLogout={handleLogout} 
+            />
+          </div>
       </aside>
 
       {/* Main Content */}

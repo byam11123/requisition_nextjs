@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { getStoreItem } from "@/lib/store-management-store";
+import { getStoreItem } from "@/lib/stores/store-management-store";
 import { resolveStoreOrganizationScope } from "@/lib/store-management-scope";
 
 export async function GET(

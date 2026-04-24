@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import FilterDropdown, {
   type FilterDropdownOption,
-} from '@/app/dashboard/components/filter-dropdown';
-import ActionIconButton from '@/app/dashboard/components/action-icon-button';
+} from '@/components/ui/filter-dropdown';
+import ActionIconButton from '@/components/ui/action-icon-button';
 import ExportMenu from '@/app/dashboard/components/export-menu';
 import {
   downloadRegisterCsv,
@@ -19,8 +19,9 @@ import PageHeader from '@/app/dashboard/components/page-header';
 import RegisterTableShell from '@/app/dashboard/components/register-table-shell';
 import StatusChip, {
   type StatusChipTone,
-} from '@/app/dashboard/components/status-chip';
-import StatCard from '@/app/dashboard/components/stat-card';
+} from '@/components/ui/status-chip';
+import StatCard from '@/components/ui/stat-card';
+import ConfirmationModal from '@/components/ui/confirmation-modal';
 
 type DashboardUser = {
   role?: string;
@@ -84,6 +85,7 @@ export default function RepairDashboard() {
   const [rowsPerPage] = useState(10);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     const loadRows = async () => {
@@ -151,11 +153,9 @@ export default function RepairDashboard() {
       : setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])));
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${selectedIds.length} selected repair requests?`)) return;
     setDeleting(true);
     try {
       const token = localStorage.getItem('token');
-      // For now, we reuse the pattern but note that we might need a specific repair bulk delete endpoint if it differs
       await fetch('/api/repair-maintainance/bulk-delete', {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -171,6 +171,7 @@ export default function RepairDashboard() {
       alert('Delete failed');
     } finally {
       setDeleting(false);
+      setDeleteModalOpen(false);
     }
   };
 
@@ -209,7 +210,7 @@ export default function RepairDashboard() {
           getRepairPaymentDisplay(row),
           row.dispatchStatus || '',
           row.deliveryStatus || '',
-          formatDate(row.timestamp),
+          formatDate(row.timestamp || ''),
         ]),
       };
 
@@ -280,7 +281,7 @@ export default function RepairDashboard() {
         actions={
           <>
           {selectedIds.length > 0 && user?.role === 'ADMIN' && (
-            <button onClick={handleBulkDelete} disabled={deleting}
+            <button onClick={() => setDeleteModalOpen(true)} disabled={deleting}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-50">
               <Trash2 size={16} />
               {deleting ? 'Deleting...' : `Delete (${selectedIds.length})`}
@@ -300,6 +301,16 @@ export default function RepairDashboard() {
         }
       />
 
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Selected Repair Requests?"
+        message={`Are you sure you want to delete ${selectedIds.length} selected repair requests? This action cannot be undone.`}
+        confirmLabel="Yes, Delete All"
+        tone="danger"
+      />
+
       {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statData.map(s => (
@@ -307,33 +318,35 @@ export default function RepairDashboard() {
             title={s.title}
             value={s.value}
             icon={s.icon}
-            tone={s.color}
+            tone={s.color as any}
             active={activeStatFilter === s.filter}
             onClick={() => setActiveStatFilter(s.filter)} />
         ))}
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-4">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+      <div className="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-3xl p-5 backdrop-blur-xl">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1 group">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--app-muted)] group-focus-within:text-[var(--app-accent)] transition-colors" />
             <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by ID, item, site, vendor or person..."
-              className="w-full bg-slate-950/50 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-slate-200 placeholder:text-slate-600" />
+              className="w-full bg-[var(--app-panel)] border border-[var(--app-border)] rounded-2xl pl-11 pr-4 py-3 text-sm outline-none focus:border-[var(--app-accent-border)] focus:ring-4 focus:ring-[var(--app-accent)]/5 text-[var(--app-text)] placeholder:text-[var(--app-muted)]/50 transition-all" />
           </div>
-          <FilterDropdown
-            label="Approval"
-            value={approvalFilter}
-            options={approvalOptions}
-            onChange={setApprovalFilter}
-          />
-          <FilterDropdown
-            label="Priority"
-            value={priorityFilter}
-            options={priorityOptions}
-            onChange={setPriorityFilter}
-          />
+          <div className="flex gap-3">
+            <FilterDropdown
+              label="Approval"
+              value={approvalFilter}
+              options={approvalOptions}
+              onChange={setApprovalFilter}
+            />
+            <FilterDropdown
+              label="Priority"
+              value={priorityFilter}
+              options={priorityOptions}
+              onChange={setPriorityFilter}
+            />
+          </div>
         </div>
       </div>
 
@@ -343,24 +356,24 @@ export default function RepairDashboard() {
         totalCount={filtered.length}
         footer={
           filtered.length > rowsPerPage ? (
-            <div className="flex justify-between items-center p-4 border-t border-white/5 text-sm text-slate-400 bg-slate-950/20">
+            <div className="flex justify-between items-center p-4 border-t border-[var(--app-border)] text-sm text-[var(--app-muted)] bg-[var(--app-panel)]/30">
               <span>Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filtered.length)} of {filtered.length} requests</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                  className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-40">Previous</button>
+                  className="px-3 py-1.5 rounded-lg border border-[var(--app-border)] hover:bg-[var(--app-accent-soft)] transition-colors disabled:opacity-40">Previous</button>
                 <button onClick={() => setPage(p => (p + 1) * rowsPerPage < filtered.length ? p + 1 : p)} disabled={(page + 1) * rowsPerPage >= filtered.length}
-                  className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-40">Next</button>
+                  className="px-3 py-1.5 rounded-lg border border-[var(--app-border)] hover:bg-[var(--app-accent-soft)] transition-colors disabled:opacity-40">Next</button>
               </div>
             </div>
           ) : null
         }
       >
           <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-950/50 text-slate-500 text-xs uppercase tracking-wider">
+            <thead className="bg-[var(--app-panel)]/80 text-[var(--app-muted)] text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3">
                   <input type="checkbox" checked={allVisible} ref={el => { if (el) el.indeterminate = someVisible && !allVisible; }}
-                    onChange={toggleAll} className="rounded border-white/10 bg-slate-800" />
+                    onChange={toggleAll} className="rounded border-[var(--app-border-strong)] bg-[var(--app-bg-secondary)]" />
                 </th>
                 <th className="px-4 py-3">Job ID</th>
                 <th className="px-4 py-3">Priority</th>
@@ -401,14 +414,26 @@ export default function RepairDashboard() {
                         {row.requestId}
                       </Link>
                     </td>
-                    <td className="px-4 py-3"><StatusChip tone={getPriorityTone(row.priority)}>{row.priority}</StatusChip></td>
+                    <td className="px-4 py-3">
+                      <StatusChip tone={getPriorityTone(row.priority || '')}>
+                        <span className="flex items-center gap-1.5">
+                          {row.priority}
+                          {row.priority === 'URGENT' && (
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                            </span>
+                          )}
+                        </span>
+                      </StatusChip>
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-200 truncate max-w-48">{row.itemDescription || 'Untitled Item'}</p>
                       <p className="text-slate-500 text-xs">{row.siteAddress || 'N/A'}</p>
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-slate-300">{row.repairRequisitionByName || '-'}</p>
-                      <p className="text-slate-500 text-xs">{formatDate(row.timestamp)}</p>
+                      <p className="text-slate-500 text-xs">{formatDate(row.timestamp || '')}</p>
                     </td>
                     <td className="px-4 py-3"><StatusChip tone={getStatusTone(getRepairApprovalDisplay(row))}>{getRepairApprovalDisplay(row)}</StatusChip></td>
                     <td className="px-4 py-3"><StatusChip tone={getStatusTone(getRepairPaymentDisplay(row))}>{getRepairPaymentDisplay(row)}</StatusChip></td>

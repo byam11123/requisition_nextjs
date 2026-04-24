@@ -15,7 +15,7 @@ import {
   APP_THEME_STORAGE_KEY,
   type AppSurfaceStyle,
   type AppThemeKey,
-} from "@/lib/app-theme";
+} from "./theme-config";
 
 type ThemeContextValue = {
   theme: AppThemeKey;

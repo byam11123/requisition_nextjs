@@ -22,7 +22,7 @@ export default function RegisterTableShell({
       <div className="flex flex-col gap-2 border-b border-[var(--app-border)] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <h2 className="text-base font-semibold text-[var(--app-text)] sm:text-lg">{title}</h2>
         {typeof totalCount === "number" ? (
-          <span className="text-xs text-[var(--app-muted)]">
+          <span className="text-sm text-[var(--app-muted)]">
             {totalCount} {countLabel}
           </span>
         ) : null}

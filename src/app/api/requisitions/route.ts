@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { hydrateDemoModuleGlobals } from '@/lib/demo-module-store';
+import { hydrateDemoModuleGlobals } from '@/lib/stores/demo-module-store';
 
 // Add BigInt support for JSON.stringify
 declare global {
@@ -214,3 +214,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+

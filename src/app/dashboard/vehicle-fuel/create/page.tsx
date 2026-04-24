@@ -9,7 +9,7 @@ import { AlertCircle, ArrowLeft, Loader2, Send, Upload, X } from "lucide-react";
 import { calculateTotalRunning } from "../vehicle-fuel-data";
 import FormSelect, {
   type FormSelectOption,
-} from "@/app/dashboard/components/form-select";
+} from "@/components/ui/form-select";
 
 export default function CreateVehicleFuelPage() {
   const router = useRouter();

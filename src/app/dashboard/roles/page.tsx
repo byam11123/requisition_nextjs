@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { Loader2, Pencil, Plus, Trash2, UserCog, X } from "lucide-react";
 
 import ActionToast from "@/app/dashboard/action-toast";
-import ActionIconButton from "@/app/dashboard/components/action-icon-button";
+import ActionIconButton from "@/components/ui/action-icon-button";
 import FormSelect, {
   type FormSelectOption,
-} from "@/app/dashboard/components/form-select";
+} from "@/components/ui/form-select";
 import PageHeader from "@/app/dashboard/components/page-header";
-import { DASHBOARD_PAGE_OPTIONS } from "@/lib/page-access";
+import { DASHBOARD_PAGE_OPTIONS } from "@/lib/config/page-access";
+import ConfirmationModal from "@/components/ui/confirmation-modal";
 
 type RoleRow = {
   key: string;
@@ -148,6 +149,7 @@ export default function RolesPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalRole, setModalRole] = useState<RoleRow | null>(null);
+  const [deleteRoleKey, setDeleteRoleKey] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
 
   const loadRoles = async () => {
@@ -172,7 +174,6 @@ export default function RolesPage() {
   }, []);
 
   const handleDelete = async (key: string) => {
-    if (!confirm("Delete this custom role?")) return;
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`/api/custom-roles/${key}`, {
@@ -222,7 +223,7 @@ export default function RolesPage() {
                 <div className="flex gap-2 self-start sm:self-auto">
                   <ActionIconButton onClick={() => { setModalRole(role); setModalOpen(true); }}
                     icon={Pencil} label="Edit role" tone="slate" />
-                  <ActionIconButton onClick={() => handleDelete(role.key)}
+                  <ActionIconButton onClick={() => setDeleteRoleKey(role.key)}
                     icon={Trash2} label="Delete role" tone="rose" />
                 </div>
               ) : null}
@@ -237,6 +238,18 @@ export default function RolesPage() {
           </div>
         ))}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!deleteRoleKey}
+        onClose={() => setDeleteRoleKey(null)}
+        onConfirm={() => {
+          if (deleteRoleKey) handleDelete(deleteRoleKey);
+        }}
+        title="Delete Role?"
+        message="Are you sure you want to delete this custom role? This might affect users assigned to it."
+        confirmLabel="Yes, Delete Role"
+        tone="danger"
+      />
 
       <RoleModal
         key={`${modalRole?.key ?? 'new'}-${modalOpen ? 'open' : 'closed'}`}

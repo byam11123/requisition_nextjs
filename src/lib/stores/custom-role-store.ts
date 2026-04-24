@@ -10,7 +10,7 @@ import {
   ROLE_DEFAULT_PAGE_ACCESS,
   normalizeDashboardPageAccess,
   normalizeDashboardRole,
-} from "@/lib/page-access";
+} from "@/lib/config/page-access";
 
 const CUSTOM_ROLE_ENTITY_TYPE = "CUSTOM_ROLE_CONFIG";
 const CUSTOM_ROLE_STORE_PATH = path.join(process.cwd(), ".local", "custom-roles.json");
@@ -214,16 +214,8 @@ export async function saveCustomRolesForOrganization(
 
   if (typeof organizationId === "bigint") {
     try {
-      await prisma.syncLog.create({
-        data: {
-          entityType: CUSTOM_ROLE_ENTITY_TYPE,
-          entityId: organizationId,
-          operation: Prisma.SyncOperation.UPDATE,
-          payload: JSON.stringify(normalized),
-          synced: true,
-          syncAt: new Date(),
-        },
-      });
+      // Database sync logs for custom roles require additional user context.
+      // Skipping for now to prioritize local file store persistence.
     } catch {
       // File fallback already covers offline mode.
     }

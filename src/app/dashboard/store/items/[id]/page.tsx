@@ -10,7 +10,9 @@ import {
   ExternalLink,
   MapPinned,
   QrCode,
+  ZoomIn,
 } from "lucide-react";
+import ImagePreviewModal from "@/components/ui/image-preview-modal";
 
 import ActionToast from "@/app/dashboard/action-toast";
 import {
@@ -55,6 +57,7 @@ export default function StoreItemDetailPage({
     message: string;
     tone: "success" | "error";
   } | null>(null);
+  const [previewData, setPreviewData] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -142,15 +145,23 @@ export default function StoreItemDetailPage({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
           <div className="overflow-hidden rounded-3xl border border-white/5 bg-slate-900/50">
-            <div className="relative h-72 border-b border-white/5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950">
+            <div 
+              className="relative h-72 border-b border-white/5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 cursor-zoom-in group"
+              onClick={() => item.imageUrl && setPreviewData({ url: item.imageUrl, title: item.name })}
+            >
               {item.imageUrl ? (
-                <Image
-                  src={item.imageUrl}
-                  alt={item.name}
-                  fill
-                  unoptimized
-                  className="object-cover"
-                />
+                <>
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.name}
+                    fill
+                    unoptimized
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center">
+                    <ZoomIn className="text-white drop-shadow-lg" size={32} />
+                  </div>
+                </>
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <Boxes size={42} className="text-slate-600" />
@@ -282,12 +293,16 @@ export default function StoreItemDetailPage({
               </div>
             </div>
 
-            <div className="mt-5 rounded-3xl border border-white/5 bg-white p-4">
+            <button
+              type="button"
+              className="mt-5 w-full overflow-hidden rounded-3xl border border-white/5 bg-white p-4 cursor-zoom-in group transition-transform hover:scale-[1.02]"
+              onClick={() => setPreviewData({ url: qrImageUrl, title: `QR Identity - ${item.name}` })}
+            >
               <div
-                className="aspect-square w-full rounded-2xl bg-contain bg-center bg-no-repeat"
+                className="aspect-square w-full rounded-2xl bg-contain bg-center bg-no-repeat transition-opacity group-hover:opacity-80"
                 style={{ backgroundImage: `url("${qrImageUrl}")` }}
               />
-            </div>
+            </button>
 
             <div className="mt-4 rounded-2xl border border-white/5 bg-slate-950/40 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -377,6 +392,15 @@ export default function StoreItemDetailPage({
           </div>
         </div>
       </div>
+
+      {previewData && (
+        <ImagePreviewModal
+          isOpen={!!previewData}
+          onClose={() => setPreviewData(null)}
+          imageUrl={previewData.url}
+          title={previewData.title}
+        />
+      )}
     </div>
   );
 }

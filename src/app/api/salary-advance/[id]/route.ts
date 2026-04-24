@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { hydrateDemoModuleGlobals } from "@/lib/demo-module-store";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { prisma } from "@/lib/prisma";
 
 declare global {

@@ -20,14 +20,14 @@ type StatusChipProps = {
 };
 
 const toneClasses: Record<StatusChipTone, string> = {
-  slate: "border-slate-500/20 bg-slate-500/10 text-slate-300",
-  indigo: "border-indigo-500/20 bg-indigo-500/10 text-indigo-300",
-  sky: "border-sky-500/20 bg-sky-500/10 text-sky-300",
-  emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
-  amber: "border-amber-500/20 bg-amber-500/10 text-amber-300",
-  rose: "border-rose-500/20 bg-rose-500/10 text-rose-300",
-  purple: "border-purple-500/20 bg-purple-500/10 text-purple-300",
-  orange: "border-orange-500/20 bg-orange-500/10 text-orange-300",
+  slate: "border-[var(--app-border)] bg-[var(--app-panel)] text-[var(--app-muted)]",
+  indigo: "border-[var(--app-accent-border)] bg-[var(--app-accent-soft)] text-[var(--app-accent-strong)]",
+  sky: "border-sky-500/20 bg-sky-500/10 text-sky-500 dark:text-sky-400 font-bold",
+  emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold",
+  amber: "border-amber-500/20 bg-amber-500/15 text-amber-600 dark:text-amber-500 font-bold",
+  rose: "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold",
+  purple: "border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold",
+  orange: "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-500 font-bold",
 };
 
 const sizeClasses = {

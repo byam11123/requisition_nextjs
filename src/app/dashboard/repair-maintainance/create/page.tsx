@@ -6,7 +6,8 @@ import Link from "next/link";
 import { ArrowLeft, Send, AlertCircle, Loader2, Upload, X } from "lucide-react";
 import FormSelect, {
   type FormSelectOption,
-} from "@/app/dashboard/components/form-select";
+} from "@/components/ui/form-select";
+import { type ContactDefinition } from "@/lib/stores/contact-store";
 
 export default function CreateRepairMaintenancePage() {
   const router = useRouter();
@@ -25,6 +26,9 @@ export default function CreateRepairMaintenancePage() {
   });
   const [repairBeforePhoto, setRepairBeforePhoto] = useState<File | null>(null);
   const [repairBeforePreview, setRepairBeforePreview] = useState<string | null>(null);
+
+  const [contacts, setContacts] = useState<ContactDefinition[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +55,35 @@ export default function CreateRepairMaintenancePage() {
     } catch {
       // ignore malformed storage value
     }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchContacts = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/contacts", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Failed to load contacts");
+        const data = await res.json();
+        if (!cancelled) {
+          setContacts(data);
+          setLoadingContacts(false);
+          if (data.length > 0) {
+            setForm(prev => ({ ...prev, repairVendorName: data[0].name }));
+          }
+        }
+      } catch (err) {
+        console.error("Contact fetch error:", err);
+        if (!cancelled) setLoadingContacts(false);
+      }
+    };
+    fetchContacts();
 
     return () => {
       cancelled = true;
@@ -134,6 +167,14 @@ export default function CreateRepairMaintenancePage() {
     { value: "REPAIRED", label: "Repaired" },
   ];
 
+  const vendorOptions: FormSelectOption<string>[] = contacts.map(c => ({
+    value: c.name,
+    label: c.department ? `${c.name} (${c.department})` : c.name,
+  }));
+  if (vendorOptions.length === 0 && !loadingContacts) {
+    vendorOptions.push({ value: "", label: "No contacts found - Go to Contact Manager" });
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
       <Link
@@ -208,7 +249,17 @@ export default function CreateRepairMaintenancePage() {
             </div>
             <div>
               <label className={labelCls}>Name of Repair Vendor *</label>
-              <input value={form.repairVendorName} onChange={set("repairVendorName")} className={inputCls} required />
+              {loadingContacts ? (
+                <div className="flex h-[46px] items-center px-4 rounded-xl border border-white/5 bg-slate-900/50 text-slate-400 text-sm">
+                  <Loader2 size={16} className="animate-spin mr-2" /> Loading vendors...
+                </div>
+              ) : (
+                <FormSelect
+                  value={form.repairVendorName}
+                  options={vendorOptions}
+                  onChange={(value) => setForm((current) => ({ ...current, repairVendorName: value }))}
+                />
+              )}
             </div>
           </div>
 

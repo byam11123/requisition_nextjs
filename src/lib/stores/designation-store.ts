@@ -167,16 +167,7 @@ export async function saveDesignationsForOrganization(
 
   if (typeof organizationId === "bigint") {
     try {
-      await prisma.syncLog.create({
-        data: {
-          entityType: DESIGNATION_ENTITY_TYPE,
-          entityId: organizationId,
-          operation: Prisma.SyncOperation.UPDATE,
-          payload: JSON.stringify(normalized),
-          synced: true,
-          syncAt: new Date(),
-        },
-      });
+      // Skipping SyncLog creation as it requires a user context.
     } catch {
       // File fallback already covers offline mode.
     }

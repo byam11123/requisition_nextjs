@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { BriefcaseBusiness, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 
 import ActionToast from "@/app/dashboard/action-toast";
-import ActionIconButton from "@/app/dashboard/components/action-icon-button";
+import ActionIconButton from "@/components/ui/action-icon-button";
 import FormSelect, {
   type FormSelectOption,
-} from "@/app/dashboard/components/form-select";
+} from "@/components/ui/form-select";
 import PageHeader from "@/app/dashboard/components/page-header";
+import ConfirmationModal from "@/components/ui/confirmation-modal";
 
 type RoleOption = {
   key: string;
@@ -202,6 +203,7 @@ export default function DesignationsPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalDesignation, setModalDesignation] = useState<DesignationRow | null>(null);
+  const [deleteDesignationKey, setDeleteDesignationKey] = useState<string | null>(null);
   const [toast, setToast] = useState<{
     message: string;
     tone: "success" | "error";
@@ -265,9 +267,6 @@ export default function DesignationsPage() {
   }, []);
 
   const handleDelete = async (key: string) => {
-    if (!confirm("Delete this designation?")) {
-      return;
-    }
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`/api/designations/${key}`, {
@@ -363,7 +362,7 @@ export default function DesignationsPage() {
                     tone="slate"
                   />
                   <ActionIconButton
-                    onClick={() => handleDelete(designation.key)}
+                    onClick={() => setDeleteDesignationKey(designation.key)}
                     icon={Trash2}
                     label="Delete designation"
                     tone="rose"
@@ -374,6 +373,18 @@ export default function DesignationsPage() {
           ))
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!deleteDesignationKey}
+        onClose={() => setDeleteDesignationKey(null)}
+        onConfirm={() => {
+          if (deleteDesignationKey) handleDelete(deleteDesignationKey);
+        }}
+        title="Delete Designation?"
+        message="Are you sure you want to delete this designation? Any users with this designation will lose the mapping."
+        confirmLabel="Yes, Delete Designation"
+        tone="danger"
+      />
 
       <DesignationModal
         key={`${modalDesignation?.key ?? "new"}-${modalOpen ? "open" : "closed"}`}

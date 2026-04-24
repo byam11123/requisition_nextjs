@@ -7,7 +7,7 @@ import { ArrowLeft, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import AttachmentCard from "@/app/dashboard/components/attachment-card";
 import { DetailInfoRow } from "@/app/dashboard/components/detail-info";
 import StatusTimeline, { type TimelineEvent } from "@/app/dashboard/status-timeline";
-import StatusChip from "@/app/dashboard/components/status-chip";
+import StatusChip from "@/components/ui/status-chip";
 
 import {
   DriverAttendanceRecord,

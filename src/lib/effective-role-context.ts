@@ -1,7 +1,7 @@
-import { findDevUserById } from "@/lib/dev-auth-store";
+import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { prisma } from "@/lib/prisma";
-import { findCustomRoleForOrganization } from "@/lib/custom-role-store";
-import { getUserCustomRoleKey } from "@/lib/user-custom-role-store";
+import { findCustomRoleForOrganization } from "@/lib/stores/custom-role-store";
+import { getUserCustomRoleKey } from "@/lib/stores/user-custom-role-store";
 
 export type EffectiveRoleContext = {
   baseRole: string;
@@ -57,3 +57,4 @@ export async function getEffectiveRoleContext(input: {
     organizationId,
   } satisfies EffectiveRoleContext;
 }
+

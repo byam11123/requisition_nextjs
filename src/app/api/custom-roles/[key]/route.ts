@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { getCustomRolesForOrganization, saveCustomRolesForOrganization } from "@/lib/custom-role-store";
+import { getCustomRolesForOrganization, saveCustomRolesForOrganization } from "@/lib/stores/custom-role-store";
 import { getEffectiveRoleContext } from "@/lib/effective-role-context";
-import { normalizeDashboardPageAccess, normalizeDashboardRole } from "@/lib/page-access";
+import { normalizeDashboardPageAccess, normalizeDashboardRole } from "@/lib/config/page-access";
 
 export async function PUT(
   req: NextRequest,

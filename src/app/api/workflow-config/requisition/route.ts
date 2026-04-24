@@ -4,12 +4,12 @@ import { getUserFromRequest } from "@/lib/auth";
 import {
   DEFAULT_REQUISITION_WORKFLOW_CONFIG,
   normalizeRequisitionWorkflowConfig,
-} from "@/lib/requisition-workflow-config";
+} from "@/lib/config/requisition-workflow-config";
 import {
   getRequisitionWorkflowOrganizationScope,
   getRequisitionWorkflowConfig,
   saveRequisitionWorkflowConfig,
-} from "@/lib/requisition-workflow-store";
+} from "@/lib/stores/requisition-workflow-store";
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -56,3 +56,4 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Unable to save workflow configuration" }, { status: 500 });
   }
 }
+

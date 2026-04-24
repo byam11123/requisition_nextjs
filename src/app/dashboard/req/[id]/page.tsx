@@ -19,13 +19,14 @@ import {
   getEnabledRequisitionWorkflowSteps,
   getRequisitionWorkflowStep,
   isRequisitionWorkflowStepComplete,
-} from "@/lib/requisition-workflow-config";
+} from "@/lib/config/requisition-workflow-config";
 import StatusTimeline, { type TimelineEvent } from "@/app/dashboard/status-timeline";
 import AttachmentCard from "@/app/dashboard/components/attachment-card";
 import { DetailInfoField } from "@/app/dashboard/components/detail-info";
+import ConfirmationModal from "@/components/ui/confirmation-modal";
 import FormSelect, {
   type FormSelectOption,
-} from "@/app/dashboard/components/form-select";
+} from "@/components/ui/form-select";
 
 type ApprovalModalProps = {
   open: boolean;
@@ -318,6 +319,8 @@ export default function ViewRequisitionPage({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
+  const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
+
 
   const loadReq = async () => {
     setLoading(true);
@@ -482,10 +485,7 @@ export default function ViewRequisitionPage({
   };
 
   const handleDispatch = async () => {
-    if (!window.confirm("Mark this requisition as dispatched?")) {
-      return;
-    }
-
+    setModalLoading(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`/api/requisitions/${id}/dispatch`, {
@@ -497,8 +497,11 @@ export default function ViewRequisitionPage({
         throw new Error(payload.error || "Dispatch failed");
       }
       await loadReq();
+      setDispatchModalOpen(false);
     } catch (error) {
       alert(error instanceof Error ? error.message : "Dispatch failed");
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -670,6 +673,16 @@ export default function ViewRequisitionPage({
         Back to Requisition
       </Link>
 
+      <ConfirmationModal
+        isOpen={dispatchModalOpen}
+        onClose={() => setDispatchModalOpen(false)}
+        onConfirm={handleDispatch}
+        title="Dispatch Requisition"
+        message="Are you sure you want to mark this requisition as dispatched? This will update the inventory and notify the requester."
+        confirmLabel="Yes, Dispatch Now"
+        tone="info"
+      />
+
       <div className="flex flex-col gap-6 lg:flex-row">
           <div className="min-w-0 flex-1 space-y-6">
            <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-5 sm:p-6 lg:p-8">
@@ -681,9 +694,9 @@ export default function ViewRequisitionPage({
                 <h1 className="text-2xl font-bold text-slate-100">{req.requestId}</h1>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className={statusColor(req.approvalStatus)}>{req.approvalStatus}</span>
-                <span className={statusColor(req.paymentStatus)}>{req.paymentStatus}</span>
-                <span className={statusColor(req.dispatchStatus)}>{req.dispatchStatus}</span>
+                <span className={statusColor(req.approvalStatus || '')}>{req.approvalStatus}</span>
+                <span className={statusColor(req.paymentStatus || '')}>{req.paymentStatus}</span>
+                <span className={statusColor(req.dispatchStatus || '')}>{req.dispatchStatus}</span>
               </div>
             </div>
 
@@ -790,7 +803,7 @@ export default function ViewRequisitionPage({
               {dispatchAccess.allowed ? (
                 <button
                   type="button"
-                  onClick={handleDispatch}
+                  onClick={() => setDispatchModalOpen(true)}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500"
                 >
                   <Package size={16} />

@@ -118,17 +118,7 @@ export async function saveUserCustomRoleKey(
 
   if (typeof userId === "bigint") {
     try {
-      await prisma.syncLog.create({
-        data: {
-          userId,
-          entityType: USER_CUSTOM_ROLE_ENTITY_TYPE,
-          entityId: userId,
-          operation: Prisma.SyncOperation.UPDATE,
-          payload: JSON.stringify({ roleKey }),
-          synced: true,
-          syncAt: new Date(),
-        },
-      });
+      // Skipping database sync log for assignment in demo mode.
     } catch {
       // File fallback already saved the assignment.
     }

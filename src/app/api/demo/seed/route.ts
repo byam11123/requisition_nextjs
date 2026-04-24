@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { hydrateDemoModuleGlobals } from "@/lib/demo-module-store";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { seedDemoData } from "@/lib/demo-seed";
 
 hydrateDemoModuleGlobals();
@@ -18,3 +18,4 @@ export async function POST(req: NextRequest) {
     ...summary,
   });
 }
+

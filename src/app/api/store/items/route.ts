@@ -5,7 +5,7 @@ import {
   createStoreItem,
   listStoreItems,
   listStoreLocations,
-} from "@/lib/store-management-store";
+} from "@/lib/stores/store-management-store";
 import { resolveStoreOrganizationScope } from "@/lib/store-management-scope";
 
 export async function GET(req: NextRequest) {
@@ -74,3 +74,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

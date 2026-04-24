@@ -24,9 +24,9 @@ import {
 } from "./store-data";
 import FilterDropdown, {
   type FilterDropdownOption,
-} from "@/app/dashboard/components/filter-dropdown";
+} from "@/components/ui/filter-dropdown";
 import PageHeader from "@/app/dashboard/components/page-header";
-import StatCard from "@/app/dashboard/components/stat-card";
+import StatCard from "@/components/ui/stat-card";
 
 export default function StoreManagementPage() {
   const [items, setItems] = useState<StoreItem[]>([]);
@@ -170,7 +170,7 @@ export default function StoreManagementPage() {
             value={loading ? "..." : card.value.toLocaleString("en-IN")}
             helper={card.helper}
             icon={card.icon}
-            tone={card.tone}
+            tone={card.tone as any}
           />
         ))}
       </div>

@@ -6,12 +6,13 @@ import { Plus, Search, Edit, MoreVertical, CheckCircle, XCircle, Trash2, Loader2
 import ActionToast from '../action-toast';
 import FilterDropdown, {
   type FilterDropdownOption,
-} from '@/app/dashboard/components/filter-dropdown';
+} from '@/components/ui/filter-dropdown';
 import FormSelect, {
   type FormSelectOption,
-} from '@/app/dashboard/components/form-select';
+} from '@/components/ui/form-select';
 import PageHeader from '@/app/dashboard/components/page-header';
 import PageAccessModal from './page-access-modal';
+import ConfirmationModal from '@/components/ui/confirmation-modal';
 
 const MOCK_USERS = [
   { id: '9998', email: 'manager@example.com', fullName: 'Mike Manager', role: 'MANAGER', baseRole: 'MANAGER', customRoleKey: 'MANAGER', customRoleName: 'Manager', rolePageAccess: null, designation: 'Senior Manager', department: 'Operations', isActive: true },
@@ -91,8 +92,8 @@ function CreateUserModal({ open, onClose, onSuccess, roles, designations }: any)
     finally { setLoading(false); }
   };
 
-  const inputCls = "w-full bg-slate-950/50 border border-white/5 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500/50 text-sm placeholder:text-slate-600";
-  const labelCls = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2";
+  const inputCls = "w-full bg-[var(--app-panel)] border border-[var(--app-border)] rounded-xl px-4 py-3 text-[var(--app-text)] outline-none focus:border-[var(--app-accent-border)] text-sm placeholder:text-[var(--app-muted)]/50";
+  const labelCls = "block text-xs font-semibold text-[var(--app-muted)] uppercase tracking-wider mb-2";
   const selectedDesignation = designations.find((designation: DesignationOption) => designation.key === form.designationKey);
   const isCustomDesignation = form.designationKey === '__custom__';
   const roleOptions: FormSelectOption<string>[] = roles.map((role: RoleOption) => ({
@@ -110,10 +111,10 @@ function CreateUserModal({ open, onClose, onSuccess, roles, designations }: any)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-slate-900 p-5 shadow-2xl animate-fade-in-up sm:p-6 lg:p-8">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border border-[var(--app-border-strong)] bg-[var(--app-surface-strong-solid)] p-5 shadow-2xl animate-fade-in-up sm:p-6 lg:p-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-slate-100">Add New User</h2>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 text-slate-400"><X size={20} /></button>
+          <h2 className="text-xl font-semibold text-[var(--app-text)]">Add New User</h2>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-[var(--app-accent-soft)] text-[var(--app-muted)]"><X size={20} /></button>
         </div>
         {error && <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -251,6 +252,7 @@ export default function UserManagementPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [accessUser, setAccessUser] = useState<any>(null);
   const [roleUser, setRoleUser] = useState<any>(null);
+  const [deleteUser, setDeleteUser] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
 
   const loadUsers = async () => {
@@ -348,11 +350,11 @@ export default function UserManagementPage() {
       />
 
       {/* Filters */}
-      <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-4 flex flex-wrap gap-3">
+      <div className="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-4 flex flex-wrap gap-3">
                 <div className="relative min-w-0 flex-1 sm:min-w-64">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-muted)]" />
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..."
-            className="w-full bg-slate-950/50 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-slate-200 placeholder:text-slate-600" />
+            className="w-full bg-[var(--app-panel)] border border-[var(--app-border)] rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-[var(--app-accent-border)] text-[var(--app-text)] placeholder:text-[var(--app-muted)]/50" />
         </div>
         <FilterDropdown
           label="Role"
@@ -369,10 +371,10 @@ export default function UserManagementPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-slate-900/50 border border-white/5 rounded-2xl overflow-hidden">
+      <div className="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-950/50 text-slate-500 text-xs uppercase tracking-wider">
+            <thead className="bg-[var(--app-panel)]/80 text-[var(--app-muted)] text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4">Name</th>
                 <th className="px-6 py-4">Email</th>
@@ -383,7 +385,7 @@ export default function UserManagementPage() {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-[var(--app-border)]">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
@@ -440,8 +442,8 @@ export default function UserManagementPage() {
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5 rounded-xl">
                             <Edit size={16} className="text-sky-400" /> Custom Role
                           </button>
-                          <button onClick={() => { if (confirm(`Delete ${u.fullName}?`)) execAction(u.id, 'delete'); }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-rose-400 hover:bg-rose-500/10 rounded-xl">
+                          <button onClick={() => { setDeleteUser(u); setMenuUser(null); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-rose-400 hover:bg-rose-500/10 rounded-xl font-medium">
                             <Trash2 size={16} /> Delete User
                           </button>
                         </div>
@@ -454,6 +456,16 @@ export default function UserManagementPage() {
           </table>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!deleteUser}
+        onClose={() => setDeleteUser(null)}
+        onConfirm={() => execAction(deleteUser.id, 'delete')}
+        title="Delete User?"
+        message={`Are you sure you want to delete ${deleteUser?.fullName || 'this user'}? This action is permanent.`}
+        confirmLabel="Yes, Delete User"
+        tone="danger"
+      />
 
       <CreateUserModal
         key={`create-${createOpen ? 'open' : 'closed'}-${roles.length}-${designations.length}`}

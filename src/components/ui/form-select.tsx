@@ -23,6 +23,7 @@ type FormSelectProps<T extends string> = {
   name?: string;
   placeholder?: string;
   size?: "default" | "sm";
+  maxHeightClassName?: string;
   renderSelected?: (option: FormSelectOption<T> | undefined) => React.ReactNode;
   renderOption?: (context: FormSelectRenderContext<T>) => React.ReactNode;
 };
@@ -36,6 +37,7 @@ export default function FormSelect<T extends string>({
   name,
   placeholder,
   size = "default",
+  maxHeightClassName = "max-h-48",
   renderSelected,
   renderOption,
 }: FormSelectProps<T>) {
@@ -53,9 +55,9 @@ export default function FormSelect<T extends string>({
     [options, value],
   );
   const buttonSizeClass =
-    size === "sm" ? "gap-2 rounded-lg px-3 py-2 text-xs" : "gap-3 rounded-xl px-4 py-3 text-sm";
+    size === "sm" ? "gap-2 rounded-2xl px-3 py-2 text-xs" : "gap-3 rounded-2xl px-4 py-3 text-sm";
   const optionSizeClass =
-    size === "sm" ? "rounded-lg px-2.5 py-2 text-xs" : "rounded-xl px-3 py-2.5 text-sm";
+    size === "sm" ? "rounded-xl px-2.5 py-2 text-xs" : "rounded-xl px-3 py-2.5 text-sm";
 
   useEffect(() => {
     if (!open) {
@@ -174,12 +176,12 @@ export default function FormSelect<T extends string>({
 
       {open ? (
         <div
-          className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-2xl border border-[var(--app-border-strong)] bg-[var(--app-surface-strong)] shadow-2xl shadow-black/40"
+          className="absolute left-0 right-0 z-50 mt-1.5 overflow-hidden rounded-2xl border border-[var(--app-border-strong)] bg-[var(--app-surface-strong)] shadow-2xl shadow-black/40"
           role="listbox"
           tabIndex={-1}
           onKeyDown={handleListKeyDown}
         >
-          <div className="max-h-64 overflow-y-auto p-1.5">
+          <div className={`overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-[var(--app-muted)] ${maxHeightClassName}`}>
             {options.map((option, index) => {
               const active = option.value === value;
               const highlighted = index === highlightedIndex;
@@ -192,12 +194,12 @@ export default function FormSelect<T extends string>({
                   aria-selected={active}
                   onMouseEnter={() => setHighlightedIndex(index)}
                   onClick={() => commitSelection(option.value)}
-                  className={`flex w-full items-center justify-between transition-colors ${
+                  className={`flex w-full items-center justify-between rounded-xl transition-all duration-200 ${
                     active
-                      ? "bg-[var(--app-accent-soft)] text-[var(--app-accent-strong)]"
+                      ? "bg-[var(--app-accent-soft)]/60 text-[var(--app-accent-strong)] shadow-inner"
                       : highlighted
-                        ? "bg-white/5 text-[var(--app-text)]"
-                        : "text-[var(--app-text)]"
+                        ? "bg-white/[0.06] text-[var(--app-text)]"
+                        : "text-[var(--app-text)]/80 hover:text-[var(--app-text)]"
                   } ${optionSizeClass}`}
                 >
                   {renderOption ? (

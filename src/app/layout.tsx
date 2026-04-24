@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import AppContentShell from "./app-content-shell";
-import AppFooter from "./app-footer";
-import { ThemeProvider } from "./theme-provider";
+import AppContentShell from "@/components/common/app-content-shell";
+import AppFooter from "@/components/common/app-footer";
+import { ThemeProvider } from "@/components/theme";
 import "./globals.css";
 
 const expose = localFont({

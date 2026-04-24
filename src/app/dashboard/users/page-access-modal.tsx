@@ -8,7 +8,7 @@ import {
   DashboardPageKey,
   DashboardRole,
   ROLE_DEFAULT_PAGE_ACCESS,
-} from "@/lib/page-access";
+} from "@/lib/config/page-access";
 
 type UserRow = {
   id: string;

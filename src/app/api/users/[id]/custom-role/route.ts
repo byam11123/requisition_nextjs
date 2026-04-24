@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { getCustomRolesForOrganization } from "@/lib/custom-role-store";
-import { findDevUserById } from "@/lib/dev-auth-store";
+import { getCustomRolesForOrganization } from "@/lib/stores/custom-role-store";
+import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
-import { saveUserCustomRoleKey } from "@/lib/user-custom-role-store";
+import { saveUserCustomRoleKey } from "@/lib/stores/user-custom-role-store";
 
 export async function PUT(
   req: NextRequest,

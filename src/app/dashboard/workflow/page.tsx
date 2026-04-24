@@ -9,7 +9,7 @@ import {
   DEFAULT_REQUISITION_WORKFLOW_CONFIG,
   REQUISITION_WORKFLOW_STEP_ORDER,
   type RequisitionWorkflowConfig,
-} from "@/lib/requisition-workflow-config";
+} from "@/lib/config/requisition-workflow-config";
 
 type RoleOption = {
   key: string;

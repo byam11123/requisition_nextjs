@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { getCustomRolesForOrganization } from "@/lib/custom-role-store";
-import { findDesignationForOrganization } from "@/lib/designation-store";
-import { createDevOrganizationUser, findDevUserById, getDevUsersForOrganization } from "@/lib/dev-auth-store";
+import { getCustomRolesForOrganization } from "@/lib/stores/custom-role-store";
+import { findDesignationForOrganization } from "@/lib/stores/designation-store";
+import { createDevOrganizationUser, findDevUserById, getDevUsersForOrganization } from "@/lib/stores/dev-auth-store";
 import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
-import { saveUserCustomRoleKey } from "@/lib/user-custom-role-store";
-import { getUserPageAccessMap } from "@/lib/user-page-access-store";
+import { saveUserCustomRoleKey } from "@/lib/stores/user-custom-role-store";
+import { getUserPageAccessMap } from "@/lib/stores/user-page-access-store";
 
 const DEV_USERS = [
   {
@@ -247,9 +247,9 @@ export async function POST(req: NextRequest) {
   }
 
   const normalizedEmail = body.email.trim().toLowerCase();
-  const finalDesignation = selectedDesignation?.name || body.designation?.trim() || null;
+  const finalDesignation = selectedDesignation?.name || body.designation?.trim() || undefined;
   const finalDepartment =
-    body.department?.trim() || selectedDesignation?.department || null;
+    body.department?.trim() || selectedDesignation?.department || undefined;
 
   if (typeof roleContext.organizationId === "string") {
     const createdUser = await createDevOrganizationUser({
@@ -323,3 +323,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
   }
 }
+

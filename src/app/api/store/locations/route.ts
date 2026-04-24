@@ -4,7 +4,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import {
   createStoreLocation,
   listStoreLocations,
-} from "@/lib/store-management-store";
+} from "@/lib/stores/store-management-store";
 import { resolveStoreOrganizationScope } from "@/lib/store-management-scope";
 
 export async function GET(req: NextRequest) {
@@ -56,3 +56,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const user = getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const scope = await resolveStoreOrganizationScope(user.sub);
+    if (!scope) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const key = searchParams.get("key");
+    if (!key) {
+      return NextResponse.json({ error: "Location key required" }, { status: 400 });
+    }
+
+    const { deleteStoreLocation } = await import("@/lib/stores/store-management-store");
+    const success = deleteStoreLocation(scope.organizationId, key);
+    
+    if (!success) {
+      return NextResponse.json({ error: "Location not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Store locations DELETE error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+

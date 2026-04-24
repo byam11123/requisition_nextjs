@@ -1,17 +1,21 @@
 import {
   saveCustomRolesForOrganization,
   type CustomRoleDefinition,
-} from "@/lib/custom-role-store";
+} from "@/lib/stores/custom-role-store";
 import {
   saveDesignationsForOrganization,
   type DesignationDefinition,
-} from "@/lib/designation-store";
-import { replaceDemoModuleData } from "@/lib/demo-module-store";
+} from "@/lib/stores/designation-store";
+import { replaceDemoModuleData } from "@/lib/stores/demo-module-store";
 import {
   saveRequisitionWorkflowConfig,
-} from "@/lib/requisition-workflow-store";
-import { saveUserCustomRoleKey } from "@/lib/user-custom-role-store";
-import { saveUserPageAccess } from "@/lib/user-page-access-store";
+} from "@/lib/stores/requisition-workflow-store";
+import { saveUserCustomRoleKey } from "@/lib/stores/user-custom-role-store";
+import { saveUserPageAccess } from "@/lib/stores/user-page-access-store";
+import {
+  saveContactsForOrganization,
+  type ContactDefinition,
+} from "@/lib/stores/contact-store";
 
 const DEMO_ORG_KEY = "demo";
 
@@ -26,7 +30,7 @@ export async function seedDemoData() {
       name: "Procurement Lead",
       description: "Owns material requests, vendor follow-up, and dispatch coordination.",
       baseRole: "PURCHASER",
-      pageAccess: ["overview", "requisition", "repair", "attendance", "profile", "newRequisition", "newRepairRequest", "newAttendance"],
+      pageAccess: ["overview", "store", "requisition", "repair", "vehicleFuel", "attendance", "profile", "newStoreItem", "newRequisition", "newRepairRequest", "newVehicleFuel", "newAttendance"],
       isSystem: false,
     },
     {
@@ -34,7 +38,7 @@ export async function seedDemoData() {
       name: "Operations Manager",
       description: "Reviews field movement, attendance, and operational approvals.",
       baseRole: "MANAGER",
-      pageAccess: ["overview", "requisition", "repair", "attendance", "salaryAdvance", "profile"],
+      pageAccess: ["overview", "store", "requisition", "repair", "vehicleFuel", "attendance", "salaryAdvance", "profile"],
       isSystem: false,
     },
     {
@@ -42,7 +46,7 @@ export async function seedDemoData() {
       name: "Finance Approver",
       description: "Handles payment completion and salary advance follow-up.",
       baseRole: "ACCOUNTANT",
-      pageAccess: ["overview", "requisition", "salaryAdvance", "profile", "newSalaryAdvance"],
+      pageAccess: ["overview", "store", "requisition", "vehicleFuel", "salaryAdvance", "profile", "newSalaryAdvance"],
       isSystem: false,
     },
     {
@@ -54,15 +58,20 @@ export async function seedDemoData() {
         "overview",
         "roles",
         "designations",
+        "contactManager",
+        "store",
         "workflow",
         "requisition",
         "repair",
+        "vehicleFuel",
         "attendance",
         "salaryAdvance",
         "users",
         "profile",
+        "newStoreItem",
         "newRequisition",
         "newRepairRequest",
+        "newVehicleFuel",
         "newAttendance",
         "newSalaryAdvance",
       ],
@@ -105,8 +114,52 @@ export async function seedDemoData() {
     },
   ];
 
+  const contacts: ContactDefinition[] = [
+    {
+      id: "cont-1",
+      name: "Ravi Garage",
+      role: "Head Mechanic",
+      department: "External Vendor",
+      phones: ["+91 9876543210", "+91 8877665544"],
+      notes: "Preferred vendor for hydraulic jack and engine overhauls.",
+    },
+    {
+      id: "cont-2",
+      name: "Dharmendra (Dr. Hyva)",
+      role: "Senior Driver",
+      department: "Transport",
+      phones: ["+91 9988776655"],
+      notes: "Specialist in driving heavy tippers on mine routes.",
+    },
+    {
+      id: "cont-3",
+      name: "FleetTrack Support",
+      role: "Tech Support",
+      department: "IT / GPS Services",
+      phones: ["1800-445-5544", "+91 9000122334"],
+      notes: "Call for GPS tracker issues and software portal resets.",
+    },
+    {
+      id: "cont-4",
+      name: "Om Auto Electricals",
+      role: "Electrical Engineer",
+      department: "External Vendor",
+      phones: ["+91 7766554433"],
+      notes: "Experts in resolving battery drains and alternator issues for escort vehicles.",
+    },
+    {
+      id: "cont-5",
+      name: "Mahesh Driver",
+      role: "Backup Driver",
+      department: "Transport",
+      phones: ["+91 9911223344", "+91 9000011111"],
+      notes: "Available for escort and highway support shifts.",
+    },
+  ];
+
   await saveCustomRolesForOrganization(DEMO_ORG_KEY, customRoles);
   await saveDesignationsForOrganization(DEMO_ORG_KEY, designations);
+  await saveContactsForOrganization(DEMO_ORG_KEY, contacts);
   await saveRequisitionWorkflowConfig(DEMO_ORG_KEY, {
     steps: [
       {
@@ -137,10 +190,10 @@ export async function seedDemoData() {
   await saveUserCustomRoleKey("9998", "OPS_MANAGER");
   await saveUserCustomRoleKey("9997", "PROCUREMENT_LEAD");
   await saveUserCustomRoleKey("9996", "FINANCE_APPROVER");
-  await saveUserPageAccess("9999", ["overview", "roles", "designations", "workflow", "requisition", "repair", "attendance", "salaryAdvance", "users", "profile", "newRequisition", "newRepairRequest", "newAttendance", "newSalaryAdvance"]);
-  await saveUserPageAccess("9998", ["overview", "requisition", "repair", "attendance", "salaryAdvance", "profile"]);
-  await saveUserPageAccess("9997", ["overview", "requisition", "repair", "attendance", "profile", "newRequisition", "newRepairRequest", "newAttendance"]);
-  await saveUserPageAccess("9996", ["overview", "requisition", "salaryAdvance", "profile", "newSalaryAdvance"]);
+  await saveUserPageAccess("9999", ["overview", "roles", "designations", "contactManager", "store", "workflow", "requisition", "repair", "vehicleFuel", "attendance", "salaryAdvance", "users", "profile", "newStoreItem", "newRequisition", "newRepairRequest", "newVehicleFuel", "newAttendance", "newSalaryAdvance"]);
+  await saveUserPageAccess("9998", ["overview", "store", "requisition", "repair", "vehicleFuel", "attendance", "salaryAdvance", "profile"]);
+  await saveUserPageAccess("9997", ["overview", "store", "requisition", "repair", "vehicleFuel", "attendance", "profile", "newStoreItem", "newRequisition", "newRepairRequest", "newVehicleFuel", "newAttendance"]);
+  await saveUserPageAccess("9996", ["overview", "store", "requisition", "vehicleFuel", "salaryAdvance", "profile", "newSalaryAdvance"]);
 
   const requisitions = [
     {
@@ -172,7 +225,7 @@ export async function seedDemoData() {
       paymentUtrNo: "UTR24011290",
       paymentMode: "NEFT",
       createdBy: { id: "9997", fullName: "Paul Purchaser" },
-      billPhotoUrl: null,
+      billPhotoUrl: "https://images.unsplash.com/photo-1554224155-1696413565d3?auto=format&fit=crop&q=80&w=400",
       materialPhotoUrl: null,
       paymentPhotoUrl: null,
       vendorPaymentDetailsUrl: null,
@@ -274,10 +327,111 @@ export async function seedDemoData() {
       paymentUtrNo: "UTR24014322",
       paymentMode: "RTGS",
       createdBy: { id: "9997", fullName: "Paul Purchaser" },
-      billPhotoUrl: null,
+      billPhotoUrl: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&q=80&w=400",
       materialPhotoUrl: null,
       paymentPhotoUrl: null,
       vendorPaymentDetailsUrl: null,
+    },
+    // Vehicle Fuel Records
+    {
+      id: "2001",
+      requestId: "FUEL-2026-0001",
+      materialDescription: "DUMPER", // used as vehicleType in UI
+      siteAddress: "CG-04-XY-1234", // used as rcNo in UI
+      description: "Routine diesel replenishment for heavy dumper.",
+      quantity: 1,
+      amount: 12500,
+      priority: "NORMAL",
+      approvalStatus: "APPROVED",
+      status: "COMPLETED",
+      vendorName: "Reliance Petroleum",
+      requiredFor: "VEHICLE_FUEL",
+      createdAt: daysAgo(3),
+      submittedAt: daysAgo(3),
+      approvedAt: daysAgo(2),
+      createdByName: "Paul Purchaser",
+      approvedByName: "Mike Manager",
+      billPhotoUrl: "https://images.unsplash.com/photo-1541625602330-2277a1cd1331?auto=format&fit=crop&q=80&w=400",
+      cardSubtitleInfo: JSON.stringify({
+        requestedByName: "Paul Purchaser",
+        fuelType: "DIESEL",
+        vehicleType: "DUMPER",
+        rcNo: "CG-04-XY-1234",
+        lastPurchaseDate: daysAgo(10),
+        lastIssuedQtyLitres: 120,
+        lastReading: 45200,
+        currentReading: 45680,
+        totalRunning: 480,
+        currentRequirementLitres: 140,
+        fuelPumpName: "Reliance Petrol Pump, Korba",
+        billAmount: 12500,
+        billUploadedAt: daysAgo(2),
+      }),
+    },
+    {
+      id: "2002",
+      requestId: "FUEL-2026-0002",
+      materialDescription: "Escort Scorpio",
+      siteAddress: "CG-10-AT-7788",
+      description: "Petrol requirement for highway escort duty.",
+      quantity: 1,
+      amount: 4500,
+      priority: "HIGH",
+      approvalStatus: "APPROVED",
+      status: "APPROVED",
+      vendorName: "Bharat Petroleum",
+      requiredFor: "VEHICLE_FUEL",
+      createdAt: daysAgo(1),
+      submittedAt: daysAgo(1),
+      approvedAt: daysAgo(1, 4),
+      createdByName: "Paul Purchaser",
+      approvedByName: "Mike Manager",
+      billPhotoUrl: null,
+      cardSubtitleInfo: JSON.stringify({
+        requestedByName: "Paul Purchaser",
+        fuelType: "PETROL",
+        vehicleType: "Escort Scorpio",
+        rcNo: "CG-10-AT-7788",
+        lastPurchaseDate: daysAgo(5),
+        lastIssuedQtyLitres: 40,
+        lastReading: 12340,
+        currentReading: 12890,
+        totalRunning: 550,
+        currentRequirementLitres: 45,
+        fuelPumpName: "",
+        billAmount: 0,
+        billUploadedAt: null,
+      }),
+    },
+    {
+      id: "2003",
+      requestId: "FUEL-2026-0003",
+      materialDescription: "Hyva Tipper",
+      siteAddress: "CG-04-LM-9001",
+      description: "Shift diesel for Korba internal movement.",
+      quantity: 1,
+      amount: 0,
+      priority: "NORMAL",
+      approvalStatus: "PENDING",
+      status: "SUBMITTED",
+      vendorName: "Shared Fuel Bay",
+      requiredFor: "VEHICLE_FUEL",
+      createdAt: daysAgo(0, 5),
+      submittedAt: daysAgo(0, 5),
+      createdByName: "Paul Purchaser",
+      billPhotoUrl: null,
+      cardSubtitleInfo: JSON.stringify({
+        requestedByName: "Paul Purchaser",
+        fuelType: "DIESEL",
+        vehicleType: "Hyva Tipper",
+        rcNo: "CG-04-LM-9001",
+        lastPurchaseDate: daysAgo(1),
+        lastIssuedQtyLitres: 80,
+        lastReading: 88400,
+        currentReading: 88510,
+        totalRunning: 110,
+        currentRequirementLitres: 90,
+      }),
     },
   ];
 
@@ -297,7 +451,7 @@ export async function seedDemoData() {
       quantity: 1,
       repairVendorName: "Heavy Duty Garage",
       vendorName: "Heavy Duty Garage",
-      repairStatusBeforePhoto: null,
+      repairStatusBeforePhoto: "https://images.unsplash.com/photo-1541625602330-2277a1cd1331?auto=format&fit=crop&q=80&w=400",
       repairStatusAfterPhoto: null,
       expectedReturnDate: daysAgo(-2),
       repairStatus: "Under repair",
@@ -338,8 +492,8 @@ export async function seedDemoData() {
       quantity: 1,
       repairVendorName: "FleetTrack Support",
       vendorName: "FleetTrack Support",
-      repairStatusBeforePhoto: null,
-      repairStatusAfterPhoto: null,
+      repairStatusBeforePhoto: "https://images.unsplash.com/photo-1558236714-d1174577605d?auto=format&fit=crop&q=80&w=400",
+      repairStatusAfterPhoto: "https://images.unsplash.com/photo-1563206767-5b18f218e7de?auto=format&fit=crop&q=80&w=400",
       expectedReturnDate: daysAgo(6),
       repairStatus: "Completed",
       returnedByName: "Mahesh Driver",
@@ -647,10 +801,10 @@ export async function seedDemoData() {
     repairs,
     attendance,
     salaryAdvances,
-    requisitionCounter: requisitions.length,
-    repairCounter: repairs.length,
-    attendanceCounter: attendance.length,
-    salaryAdvanceCounter: salaryAdvances.length,
+    requisitionCounter: Math.max(requisitions.length, 2003),
+    repairCounter: Math.max(repairs.length, 3003),
+    attendanceCounter: Math.max(attendance.length, 5003),
+    salaryAdvanceCounter: Math.max(salaryAdvances.length, 8003),
   });
 
   return {
@@ -662,7 +816,8 @@ export async function seedDemoData() {
       { email: "accountant@example.com", password: "password123", role: "Finance Approver" },
     ],
     counts: {
-      requisitions: requisitions.length,
+      requisitions: requisitions.filter(r => !r.requiredFor).length,
+      vehicleFuels: requisitions.filter(r => r.requiredFor === 'VEHICLE_FUEL').length,
       repairs: repairs.length,
       attendance: attendance.length,
       salaryAdvances: salaryAdvances.length,
@@ -671,3 +826,4 @@ export async function seedDemoData() {
     },
   };
 }
+

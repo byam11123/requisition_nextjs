@@ -13,11 +13,11 @@ import {
   XCircle,
 } from "lucide-react";
 
-import ActionToast from "../../action-toast";
-import AttachmentCard from "../../components/attachment-card";
-import { DetailInfoRow } from "../../components/detail-info";
-import StatusChip from "../../components/status-chip";
-import StatusTimeline, { type TimelineEvent } from "../../status-timeline";
+import ActionToast from "@/app/dashboard/action-toast";
+import AttachmentCard from "@/app/dashboard/components/attachment-card";
+import { DetailInfoRow } from "@/app/dashboard/components/detail-info";
+import StatusChip from "@/components/ui/status-chip";
+import StatusTimeline, { type TimelineEvent } from "@/app/dashboard/status-timeline";
 import {
   formatFuelCurrency,
   formatFuelDistance,

@@ -1,38 +1,17 @@
 "use client";
 
+import { ThemeDots } from "./";
+
 import { Palette } from "lucide-react";
 
-import { useAppTheme } from "@/app/theme-provider";
-import FormSelect, { FormSelectOption } from "@/app/dashboard/components/form-select";
-import { APP_SURFACE_STYLES, APP_THEMES } from "@/lib/app-theme";
+import { useAppTheme } from "./theme-provider";
+import FormSelect, { FormSelectOption } from "@/components/ui/form-select";
+import { APP_SURFACE_STYLES, APP_THEMES } from "./theme-config";
 
 type ThemeOptionKey = (typeof APP_THEMES)[number]["key"];
 type SurfaceOptionKey = (typeof APP_SURFACE_STYLES)[number]["key"];
 
-function ThemeDots({
-  themeKey,
-  small = false,
-}: {
-  themeKey: ThemeOptionKey;
-  small?: boolean;
-}) {
-  const option = APP_THEMES.find((item) => item.key === themeKey);
-  if (!option) {
-    return null;
-  }
 
-  return (
-    <div className={`flex items-center ${small ? "gap-1.5" : "gap-2"}`}>
-      {option.swatches.map((swatch) => (
-        <span
-          key={swatch}
-          className={small ? "h-2.5 w-2.5 rounded-full" : "h-3 w-3 rounded-full"}
-          style={{ backgroundColor: swatch }}
-        />
-      ))}
-    </div>
-  );
-}
 
 export default function ThemeSwitcher({
   compact = false,
@@ -65,6 +44,7 @@ export default function ThemeSwitcher({
           options={themeOptions}
           size="sm"
           className="w-full"
+          maxHeightClassName="max-h-[160px]"
           renderSelected={(option) => (
             <div className="flex items-center justify-center">
               {option ? <ThemeDots themeKey={option.value} small /> : null}
@@ -106,6 +86,7 @@ export default function ThemeSwitcher({
           options={themeOptions}
           size="sm"
           className="w-full"
+          maxHeightClassName="max-h-[160px]"
           renderSelected={(option) => (
             <div className="flex items-center justify-center">
               {option ? <ThemeDots themeKey={option.value} /> : null}

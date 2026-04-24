@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Send, AlertCircle, Loader2 } from 'lucide-react';
 import FormSelect, {
   type FormSelectOption,
-} from '@/app/dashboard/components/form-select';
+} from '@/components/ui/form-select';
 
 export default function CreateRequisitionPage() {
   const router = useRouter();

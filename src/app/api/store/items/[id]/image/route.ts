@@ -5,7 +5,7 @@ import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { updateStoreItemImage } from "@/lib/store-management-store";
+import { updateStoreItemImage } from "@/lib/stores/store-management-store";
 import { resolveStoreOrganizationScope } from "@/lib/store-management-scope";
 
 export async function POST(

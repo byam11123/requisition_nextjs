@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { hydrateDemoModuleGlobals } from "@/lib/demo-module-store";
-import { findDevUserById } from "@/lib/dev-auth-store";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
+import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { prisma } from "@/lib/prisma";
 
 declare global {
@@ -375,3 +375,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

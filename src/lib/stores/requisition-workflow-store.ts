@@ -3,13 +3,13 @@ import path from "node:path";
 
 import { Prisma } from "@prisma/client";
 
-import { findDevUserById } from "@/lib/dev-auth-store";
+import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_REQUISITION_WORKFLOW_CONFIG,
   type RequisitionWorkflowConfig,
   normalizeRequisitionWorkflowConfig,
-} from "@/lib/requisition-workflow-config";
+} from "@/lib/config/requisition-workflow-config";
 
 const WORKFLOW_ENTITY_TYPE = "REQUISITION_WORKFLOW";
 const WORKFLOW_STORE_PATH = path.join(process.cwd(), ".local", "workflow-config.json");
@@ -105,16 +105,7 @@ export async function saveRequisitionWorkflowConfig(
 
   if (typeof organizationId === "bigint") {
     try {
-      await prisma.syncLog.create({
-        data: {
-          entityType: WORKFLOW_ENTITY_TYPE,
-          entityId: organizationId,
-          operation: Prisma.SyncOperation.UPDATE,
-          payload: JSON.stringify(normalized),
-          synced: true,
-          syncAt: new Date(),
-        },
-      });
+      // Skipping SyncLog creation as it requires a user context.
     } catch {
       // File fallback already captured the config for offline use.
     }
@@ -122,3 +113,4 @@ export async function saveRequisitionWorkflowConfig(
 
   return normalized;
 }
+

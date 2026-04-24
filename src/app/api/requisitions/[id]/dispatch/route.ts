@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { hydrateDemoModuleGlobals } from '@/lib/demo-module-store';
-import { findDevUserById } from '@/lib/dev-auth-store';
+import { hydrateDemoModuleGlobals } from '@/lib/stores/demo-module-store';
+import { findDevUserById } from '@/lib/stores/dev-auth-store';
 import { getEffectiveRoleContext } from '@/lib/effective-role-context';
-import { canRunRequisitionWorkflowStep } from '@/lib/requisition-workflow-config';
+import { canRunRequisitionWorkflowStep } from '@/lib/config/requisition-workflow-config';
 import {
   getRequisitionWorkflowConfig,
   getRequisitionWorkflowOrganizationScope,
-} from '@/lib/requisition-workflow-store';
+} from '@/lib/stores/requisition-workflow-store';
 
 hydrateDemoModuleGlobals();
 
@@ -130,12 +130,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    if (!isInWarrantyRepairRecord(existing)) {
+    if (!isInWarrantyRepairRecord(existing as unknown as DevRequisitionRecord)) {
       const access = canRunRequisitionWorkflowStep({
         config: workflowConfig,
         key: 'dispatch',
         roleKey: effectiveRoleContext?.roleKey || role,
-        record: existing,
+        record: existing as any,
       });
       if (!access.allowed) {
         return NextResponse.json({ error: access.reason }, { status: 409 });

@@ -9,8 +9,9 @@ import {
 } from 'lucide-react';
 import FilterDropdown, {
   type FilterDropdownOption,
-} from '@/app/dashboard/components/filter-dropdown';
-import ActionIconButton from '@/app/dashboard/components/action-icon-button';
+} from '@/components/ui/filter-dropdown';
+import ActionIconButton from '@/components/ui/action-icon-button';
+import ConfirmationModal from '@/components/ui/confirmation-modal';
 import ExportMenu from '@/app/dashboard/components/export-menu';
 import {
   downloadRegisterCsv,
@@ -20,12 +21,12 @@ import PageHeader from '@/app/dashboard/components/page-header';
 import RegisterTableShell from '@/app/dashboard/components/register-table-shell';
 import StatusChip, {
   type StatusChipTone,
-} from '@/app/dashboard/components/status-chip';
-import StatCard from '@/app/dashboard/components/stat-card';
+} from '@/components/ui/status-chip';
+import StatCard from '@/components/ui/stat-card';
 import {
   DEFAULT_REQUISITION_WORKFLOW_CONFIG,
   canRunRequisitionWorkflowStep,
-} from '@/lib/requisition-workflow-config';
+} from '@/lib/config/requisition-workflow-config';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -43,6 +44,9 @@ export default function DashboardPage() {
   const [rowsPerPage] = useState(10);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false });
+  const [dispatchModal, setDispatchModal] = useState({ isOpen: false, id: '' });
+
 
   const fetchRequisitions = async () => {
     try {
@@ -130,7 +134,6 @@ export default function DashboardPage() {
       : setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])));
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${selectedIds.length} selected?`)) return;
     setDeleting(true);
     try {
       const token = localStorage.getItem('token');
@@ -142,7 +145,7 @@ export default function DashboardPage() {
       setSelectedIds([]);
       fetchRequisitions();
     } catch (e) { alert('Delete failed'); }
-    finally { setDeleting(false); }
+    finally { setDeleting(false); setDeleteModal({ isOpen: false }); }
   };
 
   if (pathname === '/dashboard') {
@@ -153,12 +156,11 @@ export default function DashboardPage() {
     );
   }
 
-  const handleDispatch = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!confirm('Mark as dispatched?')) return;
+  const handleDispatch = async (id: string) => {
     const token = localStorage.getItem('token');
     await fetch(`/api/requisitions/${id}/dispatch`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
     fetchRequisitions();
+    setDispatchModal({ isOpen: false, id: '' });
   };
 
   const handleExport = async (format: 'csv' | 'pdf') => {
@@ -271,7 +273,7 @@ export default function DashboardPage() {
         actions={
           <>
           {selectedIds.length > 0 && user?.role === 'ADMIN' && (
-            <button id="btn-bulk-delete" onClick={handleBulkDelete} disabled={deleting}
+            <button id="btn-bulk-delete" onClick={() => setDeleteModal({ isOpen: true })} disabled={deleting}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-50">
               <Trash2 size={16} />
               {deleting ? 'Deleting...' : `Delete (${selectedIds.length})`}
@@ -293,6 +295,26 @@ export default function DashboardPage() {
         }
       />
 
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={handleBulkDelete}
+        title="Delete Selected?"
+        message={`Are you sure you want to delete ${selectedIds.length} selected requisitions? This action cannot be undone.`}
+        confirmLabel="Yes, Delete All"
+        tone="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={dispatchModal.isOpen}
+        onClose={() => setDispatchModal({ isOpen: false, id: '' })}
+        onConfirm={() => handleDispatch(dispatchModal.id)}
+        title="Dispatch Requisition"
+        message="Are you sure you want to mark this requisition as dispatched?"
+        confirmLabel="Yes, Dispatch"
+        tone="info"
+      />
+
       {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statData.map(s => (
@@ -300,20 +322,20 @@ export default function DashboardPage() {
             title={s.title}
             value={s.value}
             icon={s.icon}
-            tone={s.color}
+            tone={s.color as any}
             active={activeStatFilter === s.filter}
             onClick={() => { setActiveStatFilter(s.filter); if (s.filter !== 'TOPAY') setApprovalFilter(s.filter === 'ALL' ? 'ALL' : s.filter); }} />
         ))}
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-4">
+      <div className="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-muted)]" />
             <input id="search-input" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by ID, item, site, vendor, creator..."
-              className="w-full bg-slate-950/50 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-slate-200 placeholder:text-slate-600" />
+              className="w-full bg-[var(--app-panel)] border border-[var(--app-border)] rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-[var(--app-accent-border)] text-[var(--app-text)] placeholder:text-[var(--app-muted)]/50" />
           </div>
           <FilterDropdown
             label="Approval"
@@ -327,7 +349,7 @@ export default function DashboardPage() {
             options={priorityOptions}
             onChange={setPriorityFilter}
           />
-          <span className="hidden md:flex items-center text-sm text-slate-500 whitespace-nowrap px-2">{filtered.length} results</span>
+          <span className="hidden md:flex items-center text-sm text-[var(--app-muted)] whitespace-nowrap px-2">{filtered.length} results</span>
         </div>
       </div>
 
@@ -337,24 +359,24 @@ export default function DashboardPage() {
         totalCount={filtered.length}
         footer={
           filtered.length > rowsPerPage ? (
-            <div className="flex justify-between items-center p-4 border-t border-white/5 text-sm text-slate-400 bg-slate-950/20">
+            <div className="flex justify-between items-center p-4 border-t border-[var(--app-border)] text-sm text-[var(--app-muted)] bg-[var(--app-panel)]/30">
               <span>Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filtered.length)} of {filtered.length} requisitions</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                  className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-40">Previous</button>
+                  className="px-3 py-1.5 rounded-lg border border-[var(--app-border)] hover:bg-[var(--app-accent-soft)] transition-colors disabled:opacity-40">Previous</button>
                 <button onClick={() => setPage(p => (p + 1) * rowsPerPage < filtered.length ? p + 1 : p)} disabled={(page + 1) * rowsPerPage >= filtered.length}
-                  className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-40">Next</button>
+                  className="px-3 py-1.5 rounded-lg border border-[var(--app-border)] hover:bg-[var(--app-accent-soft)] transition-colors disabled:opacity-40">Next</button>
               </div>
             </div>
           ) : null
         }
       >
           <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-950/50 text-slate-500 text-xs uppercase tracking-wider">
+            <thead className="bg-[var(--app-panel)]/80 text-[var(--app-muted)] text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3">
                   <input type="checkbox" checked={allVisible} ref={el => { if (el) el.indeterminate = someVisible && !allVisible; }}
-                    onChange={toggleAll} className="rounded border-white/10 bg-slate-800" />
+                    onChange={toggleAll} className="rounded border-[var(--app-border-strong)] bg-[var(--app-bg-secondary)]" />
                 </th>
                 <th className="px-4 py-3">Request ID</th>
                 <th className="px-4 py-3">Priority</th>
@@ -367,17 +389,17 @@ export default function DashboardPage() {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-[var(--app-border)]">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-500">
-                    <div className="inline-block w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-2" />
+                  <td colSpan={10} className="py-12 text-center text-[var(--app-muted)]">
+                    <div className="inline-block w-5 h-5 border-2 border-[var(--app-accent)] border-t-transparent rounded-full animate-spin mb-2" />
                     <p>Loading...</p>
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-500">No requisitions found</td>
+                  <td colSpan={10} className="py-12 text-center text-[var(--app-muted)]">No requisitions found</td>
                 </tr>
               ) : paginated.map((row: any) => {
                 const id = String(row.id);
@@ -387,27 +409,27 @@ export default function DashboardPage() {
                   (user?.role === 'ADMIN' && row.paymentStatus !== 'DONE');
                 return (
                   <tr key={id} onClick={() => toggleSelect(id)}
-                    className={`hover:bg-white/[0.02] cursor-pointer transition-colors ${selected ? 'bg-indigo-500/5' : ''}`}>
+                    className={`hover:bg-[var(--app-accent-soft)]/20 cursor-pointer transition-colors ${selected ? 'bg-[var(--app-accent-soft)]/30' : ''}`}>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <input type="checkbox" checked={selected} onChange={() => toggleSelect(id)}
-                        className="rounded border-white/10 bg-slate-800" />
+                        className="rounded border-[var(--app-border-strong)] bg-[var(--app-bg-secondary)]" />
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Link href={`/dashboard/req/${id}`}
-                        className="font-semibold text-indigo-400 hover:text-indigo-300 hover:underline underline-offset-2 transition-colors">
+                        className="font-semibold text-[var(--app-accent)] hover:text-[var(--app-accent-strong)] hover:underline underline-offset-2 transition-colors">
                         {row.requestId || 'DRAFT'}
                       </Link>
                     </td>
                     <td className="px-4 py-3"><StatusChip tone={getPriorityTone(row.priority || 'NORMAL')}>{row.priority || 'NORMAL'}</StatusChip></td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-200 truncate max-w-48">{row.materialDescription || row.description || 'Untitled'}</p>
-                      <p className="text-slate-500 text-xs">{row.siteAddress || 'No Site'}</p>
+                      <p className="font-medium text-[var(--app-text)] truncate max-w-48">{row.materialDescription || row.description || 'Untitled'}</p>
+                      <p className="text-[var(--app-muted)] text-xs">{row.siteAddress || 'No Site'}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-slate-300">{row.createdBy?.fullName || row.createdByName || '-'}</p>
-                      <p className="text-slate-500 text-xs">{formatDate(row.createdAt)}</p>
+                      <p className="text-[var(--app-text)]/90">{row.createdBy?.fullName || row.createdByName || '-'}</p>
+                      <p className="text-[var(--app-muted)] text-xs">{formatDate(row.createdAt)}</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-200">Rs {row.amount?.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-[var(--app-text)] font-medium">Rs {row.amount?.toLocaleString()}</td>
                     <td className="px-4 py-3"><StatusChip tone={getApprovalTone(row.approvalStatus)}>{row.approvalStatus}</StatusChip></td>
                     <td className="px-4 py-3"><StatusChip tone={getPaymentTone(row.paymentStatus)}>{row.paymentStatus}</StatusChip></td>
                     <td className="px-4 py-3"><StatusChip tone={getDispatchTone(row.dispatchStatus)}>{row.dispatchStatus}</StatusChip></td>
@@ -426,7 +448,10 @@ export default function DashboardPage() {
                           record: row,
                         }).allowed && (
                           <ActionIconButton id={`btn-dispatch-${id}`}
-                            onClick={(e) => handleDispatch(e, id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDispatchModal({ isOpen: true, id });
+                            }}
                             icon={Truck} label="Dispatch requisition" tone="purple" size="sm" />
                         )}
                       </div>

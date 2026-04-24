@@ -14,17 +14,17 @@ html[data-theme="indigo"] {
   --app-border-strong: rgba(148, 163, 184, 0.22);
   --app-border-solid: rgba(148, 163, 184, 0.24);
   --app-border-strong-solid: rgba(148, 163, 184, 0.34);
-  --app-text: #e5eefb;
-  --app-muted: #8ea0bf;
-  --app-accent: #6366f1;
-  --app-accent-hover: #7c83ff;
-  --app-accent-strong: #a5b4fc;
-  --app-accent-soft: rgba(99, 102, 241, 0.12);
-  --app-accent-border: rgba(99, 102, 241, 0.32);
-  --app-glow: rgba(99, 102, 241, 0.18);
-  --app-logo-start: #6366f1;
-  --app-logo-end: #8b5cf6;
-  --theme-accent-rgb: 99 102 241;
+  --app-text: #f0f7ff;
+  --app-muted: #94a3b8;
+  --app-accent: #818cf8;
+  --app-accent-hover: #a5b4fc;
+  --app-accent-strong: #c7d2fe;
+  --app-accent-soft: rgba(129, 140, 248, 0.12);
+  --app-accent-border: rgba(129, 140, 248, 0.32);
+  --app-glow: rgba(129, 140, 248, 0.15);
+  --app-logo-start: #818cf8;
+  --app-logo-end: #c084fc;
+  --theme-accent-rgb: 129 140 248;
   --app-sidebar-wash: linear-gradient(180deg, rgba(99, 102, 241, 0.10), transparent 24%);
 }
 
@@ -41,44 +41,39 @@ html[data-theme="emerald"] {
   --app-border-strong: rgba(45, 212, 191, 0.25);
   --app-border-solid: rgba(45, 212, 191, 0.24);
   --app-border-strong-solid: rgba(45, 212, 191, 0.34);
-  --app-text: #e6fff7;
-  --app-muted: #93c5c0;
-  --app-accent: #10b981;
-  --app-accent-hover: #14d399;
+  --app-text: #f0fffb;
+  --app-muted: #94c5c0;
+  --app-accent: #34d399;
+  --app-accent-hover: #10b981;
   --app-accent-strong: #6ee7b7;
-  --app-accent-soft: rgba(16, 185, 129, 0.13);
-  --app-accent-border: rgba(16, 185, 129, 0.32);
-  --app-glow: rgba(16, 185, 129, 0.2);
-  --app-logo-start: #10b981;
-  --app-logo-end: #0ea5a4;
-  --theme-accent-rgb: 16 185 129;
+  --app-accent-soft: rgba(52, 211, 153, 0.12);
+  --app-accent-border: rgba(52, 211, 153, 0.3);
+  --app-glow: rgba(52, 211, 153, 0.16);
+  --app-logo-start: #34d399;
+  --app-logo-end: #2dd4bf;
+  --theme-accent-rgb: 52 211 153;
   --app-sidebar-wash: linear-gradient(180deg, rgba(16, 185, 129, 0.11), transparent 24%);
 }
 
 html[data-theme="crimson"] {
   --app-bg: #12050b;
   --app-bg-secondary: #1f0d16;
-  --app-surface: rgba(28, 10, 19, 0.84);
-  --app-surface-strong: rgba(38, 12, 24, 0.96);
-  --app-panel: rgba(24, 8, 15, 0.48);
-  --app-surface-solid: #2a101d;
-  --app-surface-strong-solid: #210b16;
-  --app-panel-solid: #190711;
-  --app-border: rgba(251, 113, 133, 0.14);
-  --app-border-strong: rgba(251, 113, 133, 0.26);
-  --app-border-solid: rgba(251, 113, 133, 0.24);
-  --app-border-strong-solid: rgba(251, 113, 133, 0.34);
+  --app-bg: #0d0e12;
+  --app-bg-secondary: #16181d;
+  --app-surface: rgba(22, 24, 29, 0.86);
+  --app-surface-strong: rgba(22, 24, 29, 0.97);
+  --app-panel: rgba(15, 17, 21, 0.48);
   --app-text: #fff1f5;
-  --app-muted: #d7a2b4;
-  --app-accent: #f43f5e;
-  --app-accent-hover: #fb7185;
+  --app-muted: #d4a5b5;
+  --app-accent: #fb7185;
+  --app-accent-hover: #f43f5e;
   --app-accent-strong: #fda4af;
-  --app-accent-soft: rgba(244, 63, 94, 0.13);
-  --app-accent-border: rgba(244, 63, 94, 0.32);
-  --app-glow: rgba(244, 63, 94, 0.18);
-  --app-logo-start: #f43f5e;
-  --app-logo-end: #ef4444;
-  --theme-accent-rgb: 244 63 94;
+  --app-accent-soft: rgba(251, 113, 133, 0.12);
+  --app-accent-border: rgba(251, 113, 133, 0.3);
+  --app-glow: rgba(251, 113, 133, 0.15);
+  --app-logo-start: #fb7185;
+  --app-logo-end: #f43f5e;
+  --theme-accent-rgb: 251 113 133;
   --app-sidebar-wash: linear-gradient(180deg, rgba(244, 63, 94, 0.10), transparent 24%);
 }
 
@@ -235,6 +230,8 @@ html[data-theme="sky-paper"] {
 @layer base {
   html {
     background: var(--app-bg);
+    font-size: 106.25%; /* Increases base font from 16px to 17px */
+    letter-spacing: -0.011em;
   }
 
   body {
@@ -350,7 +347,7 @@ html[data-theme="sky-paper"] {
 .text-slate-200,
 .text-slate-300 {
   color: var(--app-text) !important;
-  font-weight: 550;
+  font-weight: 500;
 }
 
 .text-slate-400,

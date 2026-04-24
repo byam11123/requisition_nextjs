@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {
   DashboardPageKey,
   normalizeDashboardPageAccess,
-} from "@/lib/page-access";
+} from "@/lib/config/page-access";
 
 const USER_PAGE_ACCESS_ENTITY_TYPE = "USER_PAGE_ACCESS";
 const g = globalThis as typeof globalThis & {
@@ -121,17 +121,7 @@ export async function saveUserPageAccess(
 
   if (typeof userId === "bigint") {
     try {
-      await prisma.syncLog.create({
-        data: {
-          userId,
-          entityType: USER_PAGE_ACCESS_ENTITY_TYPE,
-          entityId: userId,
-          operation: Prisma.SyncOperation.UPDATE,
-          payload: JSON.stringify({ pages: normalizedPages } satisfies UserPageAccessPayload),
-          synced: true,
-          syncAt: new Date(),
-        },
-      });
+      // Skipping database SyncLog as it requires user context and specific relations.
     } catch {
       // Keep in-memory access available even when the database is offline.
     }

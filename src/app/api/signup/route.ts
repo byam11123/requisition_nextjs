@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 
 import { generateToken } from "@/lib/auth";
-import { createDevSignupAccount, findDevUserByEmail } from "@/lib/dev-auth-store";
+import { createDevSignupAccount, findDevUserByEmail } from "@/lib/stores/dev-auth-store";
 import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
 
@@ -169,3 +169,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
