@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 
 declare global {
   interface BigInt {
@@ -10,6 +11,8 @@ declare global {
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
+
+hydrateDemoModuleGlobals();
 
 const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
 const MODULE_KEY = "REPAIR_MAINTAINANCE";
@@ -106,7 +109,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(mapped);
   } catch (error) {
-    console.error("Repair/Maintainance GET error:", error);
+    console.error("Repair/Maintenance GET error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -224,7 +227,8 @@ export async function POST(req: NextRequest) {
       dispatchDate: payloadMeta.dispatchDate || null,
     });
   } catch (error) {
-    console.error("Repair/Maintainance POST error:", error);
+    console.error("Repair/Maintenance POST error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

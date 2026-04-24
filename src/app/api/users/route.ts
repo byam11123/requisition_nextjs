@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { findDevUserById, getDevUsersForOrganization } from "@/lib/dev-auth-store";
+import { getCustomRolesForOrganization } from "@/lib/stores/custom-role-store";
+import { findDesignationForOrganization } from "@/lib/stores/designation-store";
+import { createDevOrganizationUser, findDevUserById, getDevUsersForOrganization } from "@/lib/stores/dev-auth-store";
+import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
-import { getUserPageAccessMap } from "@/lib/user-page-access-store";
+import { saveUserCustomRoleKey } from "@/lib/stores/user-custom-role-store";
+import { getUserPageAccessMap } from "@/lib/stores/user-page-access-store";
 
 const DEV_USERS = [
   {
@@ -66,6 +71,7 @@ export async function GET(req: NextRequest) {
       where: { organizationId: dbUser.organizationId },
       select: {
         id: true,
+        organizationId: true,
         email: true,
         fullName: true,
         role: true,
@@ -78,12 +84,25 @@ export async function GET(req: NextRequest) {
     });
 
     const pageAccessMap = await getUserPageAccessMap(users.map((entry) => entry.id));
+    const effectiveRoles = await Promise.all(
+      users.map((entry) =>
+        getEffectiveRoleContext({
+          userId: entry.id.toString(),
+          baseRole: entry.role,
+          organizationId: entry.organizationId,
+        }),
+      ),
+    );
 
     return NextResponse.json(
-      users.map((entry) => ({
+      users.map((entry, index) => ({
         ...entry,
         id: entry.id.toString(),
         pageAccess: pageAccessMap.get(entry.id.toString()) || null,
+        baseRole: entry.role,
+        customRoleKey: effectiveRoles[index]?.roleKey || entry.role,
+        customRoleName: effectiveRoles[index]?.roleName || entry.role,
+        rolePageAccess: effectiveRoles[index]?.rolePageAccess || null,
       })),
     );
   } catch (error) {
@@ -93,8 +112,17 @@ export async function GET(req: NextRequest) {
     if (devAdminUser && devAdminUser.role === "ADMIN") {
       const orgUsers = getDevUsersForOrganization(devAdminUser.organizationId);
       const pageAccessMap = await getUserPageAccessMap(orgUsers.map((entry) => entry.id));
+      const effectiveRoles = await Promise.all(
+        orgUsers.map((entry) =>
+          getEffectiveRoleContext({
+            userId: entry.id,
+            baseRole: entry.role,
+            organizationId: entry.organizationId,
+          }),
+        ),
+      );
       return NextResponse.json(
-        orgUsers.map((entry) => ({
+        orgUsers.map((entry, index) => ({
           id: entry.id,
           email: entry.email,
           fullName: entry.fullName,
@@ -104,16 +132,195 @@ export async function GET(req: NextRequest) {
           isActive: entry.isActive,
           lastLogin: entry.lastLogin,
           pageAccess: pageAccessMap.get(entry.id) || null,
+          baseRole: entry.role,
+          customRoleKey: effectiveRoles[index]?.roleKey || entry.role,
+          customRoleName: effectiveRoles[index]?.roleName || entry.role,
+          rolePageAccess: effectiveRoles[index]?.rolePageAccess || null,
+        })),
+      );
+    }
+
+    if (user.sub === "9999") {
+      const demoOrgUsers = getDevUsersForOrganization("demo");
+      const mergedUsers = [
+        ...DEV_USERS,
+        ...demoOrgUsers
+          .filter((entry) => !DEV_USERS.some((demoUser) => demoUser.email === entry.email))
+          .map((entry) => ({
+            id: entry.id,
+            email: entry.email,
+            fullName: entry.fullName,
+            role: entry.role,
+            designation: entry.designation,
+            department: entry.department,
+            isActive: entry.isActive,
+            lastLogin: entry.lastLogin,
+          })),
+      ];
+      const pageAccessMap = await getUserPageAccessMap(mergedUsers.map((entry) => entry.id));
+      const effectiveRoles = await Promise.all(
+        mergedUsers.map((entry) =>
+          getEffectiveRoleContext({
+            userId: entry.id,
+            baseRole: entry.role,
+            organizationId: "demo",
+          }),
+        ),
+      );
+      return NextResponse.json(
+        mergedUsers.map((entry, index) => ({
+          ...entry,
+          pageAccess: pageAccessMap.get(entry.id) || null,
+          baseRole: entry.role,
+          customRoleKey: effectiveRoles[index]?.roleKey || entry.role,
+          customRoleName: effectiveRoles[index]?.roleName || entry.role,
+          rolePageAccess: effectiveRoles[index]?.rolePageAccess || null,
         })),
       );
     }
 
     const pageAccessMap = await getUserPageAccessMap(DEV_USERS.map((entry) => entry.id));
+    const effectiveRoles = await Promise.all(
+      DEV_USERS.map((entry) =>
+        getEffectiveRoleContext({
+          userId: entry.id,
+          baseRole: entry.role,
+          organizationId: "demo",
+        }),
+      ),
+    );
     return NextResponse.json(
-      DEV_USERS.map((entry) => ({
+      DEV_USERS.map((entry, index) => ({
         ...entry,
         pageAccess: pageAccessMap.get(entry.id) || null,
+        baseRole: entry.role,
+        customRoleKey: effectiveRoles[index]?.roleKey || entry.role,
+        customRoleName: effectiveRoles[index]?.roleName || entry.role,
+        rolePageAccess: effectiveRoles[index]?.rolePageAccess || null,
       })),
     );
   }
 }
+
+export async function POST(req: NextRequest) {
+  const user = getUserFromRequest(req);
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const roleContext = await getEffectiveRoleContext({ userId: user.sub, baseRole: user.role });
+  if (!roleContext) {
+    return NextResponse.json({ error: "Role context unavailable" }, { status: 404 });
+  }
+
+  const body = (await req.json()) as {
+    fullName?: string;
+    email?: string;
+    password?: string;
+    designationKey?: string;
+    designation?: string;
+    department?: string;
+    customRoleKey?: string;
+  };
+
+  if (!body.fullName?.trim() || !body.email?.trim() || !body.password) {
+    return NextResponse.json({ error: "Full name, email, password, and role are required" }, { status: 400 });
+  }
+
+  const selectedDesignation = body.designationKey
+    ? await findDesignationForOrganization(roleContext.organizationId, body.designationKey)
+    : null;
+  if (body.designationKey && !selectedDesignation) {
+    return NextResponse.json({ error: "Selected designation not found" }, { status: 404 });
+  }
+
+  const roles = await getCustomRolesForOrganization(roleContext.organizationId);
+  const resolvedRoleKey =
+    body.customRoleKey?.trim().toUpperCase() || selectedDesignation?.defaultCustomRoleKey || "";
+  if (!resolvedRoleKey) {
+    return NextResponse.json({ error: "A custom role is required or must be mapped from the designation" }, { status: 400 });
+  }
+
+  const selectedRole = roles.find((entry) => entry.key === resolvedRoleKey);
+  if (!selectedRole) {
+    return NextResponse.json({ error: "Selected role not found" }, { status: 404 });
+  }
+
+  const normalizedEmail = body.email.trim().toLowerCase();
+  const finalDesignation = selectedDesignation?.name || body.designation?.trim() || undefined;
+  const finalDepartment =
+    body.department?.trim() || selectedDesignation?.department || undefined;
+
+  if (typeof roleContext.organizationId === "string") {
+    const createdUser = await createDevOrganizationUser({
+      organizationId: roleContext.organizationId,
+      email: normalizedEmail,
+      fullName: body.fullName,
+      password: body.password,
+      role: selectedRole.baseRole,
+      designation: finalDesignation,
+      department: finalDepartment,
+    });
+
+    await saveUserCustomRoleKey(createdUser.id, selectedRole.key);
+
+    return NextResponse.json({
+      id: createdUser.id,
+      email: createdUser.email,
+      fullName: createdUser.fullName,
+      role: createdUser.role,
+      baseRole: createdUser.role,
+      customRoleKey: selectedRole.key,
+      customRoleName: selectedRole.name,
+      rolePageAccess: selectedRole.pageAccess,
+      designation: createdUser.designation,
+      department: createdUser.department,
+      isActive: createdUser.isActive,
+      lastLogin: createdUser.lastLogin,
+      pageAccess: null,
+    });
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
+    }
+
+    const passwordHash = await bcrypt.hash(body.password, 10);
+    const createdUser = await prisma.user.create({
+      data: {
+        organizationId: roleContext.organizationId,
+        email: normalizedEmail,
+        fullName: body.fullName.trim(),
+        passwordHash,
+        role: selectedRole.baseRole,
+        designation: finalDesignation,
+        department: finalDepartment,
+        isActive: true,
+      },
+    });
+
+    await saveUserCustomRoleKey(createdUser.id, selectedRole.key);
+
+    return NextResponse.json({
+      id: createdUser.id.toString(),
+      email: createdUser.email,
+      fullName: createdUser.fullName,
+      role: createdUser.role,
+      baseRole: createdUser.role,
+      customRoleKey: selectedRole.key,
+      customRoleName: selectedRole.name,
+      rolePageAccess: selectedRole.pageAccess,
+      designation: createdUser.designation,
+      department: createdUser.department,
+      isActive: createdUser.isActive,
+      lastLogin: createdUser.lastLogin,
+      pageAccess: null,
+    });
+  } catch (error) {
+    console.error("Users POST error:", error);
+    return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+  }
+}
+

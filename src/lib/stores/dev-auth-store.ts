@@ -213,3 +213,36 @@ export async function createDevSignupAccount(input: {
 
   return { organization, user };
 }
+
+export async function createDevOrganizationUser(input: {
+  organizationId: string;
+  email: string;
+  fullName: string;
+  password: string;
+  role: DevRole;
+  designation?: string;
+  department?: string;
+}) {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  if (findDevUserByEmail(normalizedEmail)) {
+    throw new Error("An account with this email already exists");
+  }
+
+  const user: DevUser = {
+    id: nextUserId(),
+    organizationId: input.organizationId,
+    email: normalizedEmail,
+    fullName: input.fullName.trim(),
+    passwordHash: await bcrypt.hash(input.password, 10),
+    role: input.role,
+    designation: input.designation?.trim() || null,
+    department: input.department?.trim() || null,
+    isActive: true,
+    lastLogin: null,
+  };
+
+  getUsers().push(user);
+  persistState();
+
+  return user;
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { hydrateDemoModuleGlobals } from '@/lib/stores/demo-module-store';
 
 // Add BigInt support for JSON.stringify
 declare global {
@@ -12,8 +13,16 @@ BigInt.prototype.toJSON = function () {
   return this.toString();
 };
 
+hydrateDemoModuleGlobals();
+
 // ── Dev bypass helpers ───────────────────────────────────────────────────────
 const DEV_IDS = new Set(['9999', '9998', '9997', '9996']);
+const NON_REQUISITION_MODULE_KEYS = new Set([
+  'REPAIR_MAINTAINANCE',
+  'DRIVER_ATTENDANCE',
+  'SALARY_ADVANCE',
+  'VEHICLE_FUEL',
+]);
 
 // Global singleton so all route modules share the same store
 const g = globalThis as any;
@@ -78,6 +87,9 @@ const nextDevId = (): { id: string; seq: number } => {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
+const isPlainRequisitionRecord = (record: { requiredFor?: string | null }) =>
+  !record.requiredFor || !NON_REQUISITION_MODULE_KEYS.has(record.requiredFor);
+
 export async function GET(req: NextRequest) {
     const user = getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -88,7 +100,7 @@ export async function GET(req: NextRequest) {
 
     // Bypass for all dev test users
     if (DEV_IDS.has(user.sub)) {
-      return NextResponse.json(devStore());
+      return NextResponse.json(devStore().filter(isPlainRequisitionRecord));
     }
 
     const dbUser = await prisma.user.findUnique({ where: { id: BigInt(user.sub) }});
@@ -96,6 +108,11 @@ export async function GET(req: NextRequest) {
 
     const whereClause: any = {
       organizationId: dbUser.organizationId,
+      OR: [
+        { requiredFor: null },
+        { requiredFor: '' },
+        { requiredFor: { notIn: Array.from(NON_REQUISITION_MODULE_KEYS) } },
+      ],
     };
 
     if (status) {
@@ -197,3 +214,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+

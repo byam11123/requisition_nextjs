@@ -6,20 +6,34 @@ import {
   CalendarCheck2,
   CheckCircle2,
   Clock3,
-  Download,
   Eye,
-  Image as ImageIcon,
+  ImageIcon,
   Plus,
   Search,
   XCircle,
+  ZoomIn,
 } from "lucide-react";
+import ImagePreviewModal from "@/components/ui/image-preview-modal";
 
 import {
   DriverAttendanceRecord,
   formatAttendanceDate,
   getAttendanceRouteType,
-  getAttendanceStatusClasses,
+  getAttendanceStatusTone,
 } from "./attendance-data";
+import FilterDropdown, {
+  type FilterDropdownOption,
+} from "@/components/ui/filter-dropdown";
+import ActionIconButton from "@/components/ui/action-icon-button";
+import ExportMenu from "@/app/dashboard/components/export-menu";
+import {
+  downloadRegisterCsv,
+  openRegisterPdf,
+} from "@/app/dashboard/components/export-utils";
+import PageHeader from "@/app/dashboard/components/page-header";
+import RegisterTableShell from "@/app/dashboard/components/register-table-shell";
+import StatusChip from "@/components/ui/status-chip";
+import StatCard from "@/components/ui/stat-card";
 
 export default function AttendancePage() {
   const [rows, setRows] = useState<DriverAttendanceRecord[]>([]);
@@ -36,6 +50,9 @@ export default function AttendancePage() {
     "ALL" | DriverAttendanceRecord["status"]
   >("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage] = useState(10);
+  const [previewData, setPreviewData] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     const fetchRows = async () => {
@@ -104,6 +121,13 @@ export default function AttendancePage() {
     });
   }, [activeStatFilter, routeFilter, rows, searchQuery, statusFilter]);
 
+  const maxPage = Math.max(0, Math.ceil(filteredRows.length / rowsPerPage) - 1);
+  const currentPage = Math.min(page, maxPage);
+  const paginatedRows = filteredRows.slice(
+    currentPage * rowsPerPage,
+    (currentPage + 1) * rowsPerPage,
+  );
+
   const statCards = [
     {
       title: "Pending Approval",
@@ -135,14 +159,22 @@ export default function AttendancePage() {
     },
   ];
 
-  const colorMap: Record<string, string> = {
-    amber: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-    emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-    rose: "bg-rose-500/10 text-rose-400 border-rose-500/30",
-    purple: "bg-purple-500/10 text-purple-400 border-purple-500/30",
-  };
+  const statusOptions: FilterDropdownOption<
+    "ALL" | DriverAttendanceRecord["status"]
+  >[] = [
+    { value: "ALL", label: "All Approval" },
+    { value: "PENDING", label: "Pending" },
+    { value: "APPROVED", label: "Approved" },
+    { value: "REJECTED", label: "Rejected" },
+  ];
 
-  const visibleIds = filteredRows.map((row) => String(row.id));
+  const routeOptions: FilterDropdownOption<"ALL" | "INTRA_CITY" | "INTER_SITE">[] = [
+    { value: "ALL", label: "All Routes" },
+    { value: "INTER_SITE", label: "Inter Site" },
+    { value: "INTRA_CITY", label: "Intra City" },
+  ];
+
+  const visibleIds = paginatedRows.map((row) => String(row.id));
   const allVisible =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const someVisible = visibleIds.some((id) => selectedIds.includes(id));
@@ -163,32 +195,37 @@ export default function AttendancePage() {
           Array.from(new Set([...current, ...visibleIds])),
         );
 
-  const exportRows = async () => {
+  const runExport = async (format: "csv" | "pdf") => {
     setExporting(true);
     try {
       const exportSource =
         selectedIds.length > 0
           ? filteredRows.filter((row) => selectedIds.includes(String(row.id)))
           : filteredRows;
-      const csvRows = [
-        [
-          "Status",
-          "Timestamp",
-          "Slip ID",
-          "Driver Name",
-          "From Site",
-          "To Site",
-          "Vehicle Type",
-          "Vehicle Name",
-          "Vehicle Number",
-          "Admin Name",
-          "Father Name",
-          "Geo Tag Photo",
+      const exportConfig = {
+        filename: format === "csv" ? "attendance-register.csv" : "attendance-register.pdf",
+        title: "Driver Attendance Register",
+        subtitle:
+          "Driver movement slips, route details, geo-tag references, and review statuses.",
+        countLabel: "attendance slips",
+        columns: [
+          { label: "Slip ID" },
+          { label: "Status" },
+          { label: "Timestamp" },
+          { label: "Driver Name" },
+          { label: "From Site" },
+          { label: "To Site" },
+          { label: "Vehicle Type" },
+          { label: "Vehicle Name" },
+          { label: "Vehicle Number" },
+          { label: "Admin Name" },
+          { label: "Father Name" },
+          { label: "Geo Tag Photo" },
         ],
-        ...exportSource.map((row) => [
+        rows: exportSource.map((row) => [
+          row.requestId,
           row.status,
           formatAttendanceDate(row.timestamp),
-          row.requestId,
           row.driverName,
           row.fromSiteName,
           row.toSiteName,
@@ -197,27 +234,15 @@ export default function AttendancePage() {
           row.vehicleNumber,
           row.adminName,
           row.fatherName,
-          row.geoTagPhotoUrl || "",
+          row.geoTagPhotoUrl ? "Attached" : "Pending",
         ]),
-      ];
+      };
 
-      const csvContent = csvRows
-        .map((columns) =>
-          columns
-            .map((value) => `"${String(value).replace(/"/g, '""')}"`)
-            .join(","),
-        )
-        .join("\n");
-
-      const blob = new Blob([csvContent], {
-        type: "text/csv;charset=utf-8;",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "attendance-register.csv";
-      link.click();
-      window.URL.revokeObjectURL(url);
+      if (format === "csv") {
+        downloadRegisterCsv(exportConfig);
+      } else {
+        openRegisterPdf(exportConfig);
+      }
     } finally {
       setExporting(false);
     }
@@ -225,26 +250,17 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">
-            Driver Attendance
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Manage movement slips, site routes, and geo-tag attendance records.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={exportRows}
-            disabled={exporting}
-            className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 disabled:opacity-50"
-          >
-            <Download size={16} />
-            {selectedIds.length > 0
-              ? `Export (${selectedIds.length})`
-              : "Export All"}
-          </button>
+      <PageHeader
+        title="Driver Attendance"
+        subtitle="Manage movement slips, site routes, and geo-tag attendance records."
+        actions={
+          <>
+          <ExportMenu
+            exporting={exporting}
+            selectedCount={selectedIds.length}
+            onExportCsv={() => runExport("csv")}
+            onExportPdf={() => runExport("pdf")}
+          />
           <Link
             href="/dashboard/attendance/create"
             className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-600/20 transition-colors hover:bg-indigo-500"
@@ -252,89 +268,95 @@ export default function AttendancePage() {
             <Plus size={16} />
             New Attendance
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((card) => (
-          <button
+          <StatCard
             key={card.title}
+            title={card.title}
+            value={card.value}
+            icon={card.icon}
+            tone={card.color as any}
+            active={activeStatFilter === card.filter}
             onClick={() => setActiveStatFilter(card.filter)}
-            className={`flex items-center justify-between rounded-xl border p-4 transition-all hover:scale-[1.01] ${
-              activeStatFilter === card.filter
-                ? colorMap[card.color]
-                : "border-white/5 bg-slate-900/50 hover:border-white/10"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`inline-flex rounded-lg p-2 ${colorMap[card.color]}`}>
-                <card.icon size={18} />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                {card.title}
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-slate-100">{card.value}</p>
-          </button>
+          />
         ))}
       </div>
 
-      <div className="rounded-2xl border border-white/5 bg-slate-900/50 p-4">
+      <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
             <Search
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-muted)]"
             />
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search by slip ID, driver, vehicle, admin or site..."
-              className="w-full rounded-xl border border-white/5 bg-slate-950/50 py-2.5 pl-9 pr-4 text-sm text-slate-200 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500/50"
+              className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] py-2.5 pl-9 pr-4 text-sm text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-muted)]/50 focus:border-[var(--app-accent-border)]"
             />
           </div>
-          <select
+          <FilterDropdown
+            label="Approval"
             value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value as "ALL" | DriverAttendanceRecord["status"],
-              )
-            }
-            className="rounded-xl border border-white/5 bg-slate-950/50 px-3 py-2.5 text-sm text-slate-300 outline-none transition-colors focus:border-indigo-500/50"
-          >
-            <option value="ALL">All Approval</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
-          <select
+            options={statusOptions}
+            onChange={setStatusFilter}
+          />
+          <FilterDropdown
+            label="Route"
             value={routeFilter}
-            onChange={(event) =>
-              setRouteFilter(
-                event.target.value as "ALL" | "INTRA_CITY" | "INTER_SITE",
-              )
-            }
-            className="rounded-xl border border-white/5 bg-slate-950/50 px-3 py-2.5 text-sm text-slate-300 outline-none transition-colors focus:border-indigo-500/50"
-          >
-            <option value="ALL">All Routes</option>
-            <option value="INTER_SITE">Inter Site</option>
-            <option value="INTRA_CITY">Intra City</option>
-          </select>
+            options={routeOptions}
+            onChange={setRouteFilter}
+          />
+          <span className="hidden items-center whitespace-nowrap px-2 text-sm text-[var(--app-muted)] md:flex">
+            {filteredRows.length} results
+          </span>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50">
-        <div className="flex items-center justify-between border-b border-white/5 p-5">
-          <h2 className="text-lg font-semibold text-slate-100">
-            Attendance Register
-          </h2>
-          <span className="text-xs text-slate-500">
-            {filteredRows.length} total results
-          </span>
-        </div>
-        <div className="overflow-x-auto">
+      <RegisterTableShell
+        title="Driver Attendance Register"
+        totalCount={filteredRows.length}
+        footer={
+          filteredRows.length > rowsPerPage ? (
+            <div className="flex items-center justify-between border-t border-white/5 px-5 py-3 text-sm text-slate-400">
+              <span>
+                Showing {currentPage * rowsPerPage + 1}-
+                {Math.min((currentPage + 1) * rowsPerPage, filteredRows.length)} of{" "}
+                {filteredRows.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((current) => Math.max(0, current - 1))}
+                  disabled={currentPage === 0}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() =>
+                    setPage((current) =>
+                      (current + 1) * rowsPerPage < filteredRows.length
+                        ? current + 1
+                        : current,
+                    )
+                  }
+                  disabled={(currentPage + 1) * rowsPerPage >= filteredRows.length}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : null
+        }
+      >
           <table className="w-full whitespace-nowrap text-left text-sm">
-            <thead className="bg-slate-950/50 text-xs uppercase tracking-wider text-slate-500">
+            <thead className="bg-[var(--app-panel)]/80 text-xs uppercase tracking-wider text-[var(--app-muted)]">
               <tr>
                 <th className="px-4 py-3">
                   <input
@@ -346,12 +368,12 @@ export default function AttendancePage() {
                       }
                     }}
                     onChange={toggleAll}
-                    className="rounded border-white/10 bg-slate-800"
+                    className="rounded border-[var(--app-border-strong)] bg-[var(--app-bg-secondary)]"
                   />
                 </th>
+                <th className="px-4 py-3">Slip ID</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Timestamp</th>
-                <th className="px-4 py-3">Slip ID</th>
                 <th className="px-4 py-3">Driver</th>
                 <th className="px-4 py-3">Route</th>
                 <th className="px-4 py-3">Vehicle</th>
@@ -375,11 +397,10 @@ export default function AttendancePage() {
                   </td>
                 </tr>
               ) : (
-                filteredRows.map((record) => (
+                paginatedRows.map((record) => (
                   <tr
                     key={record.id}
-                    onClick={() => toggleSelect(String(record.id))}
-                    className={`cursor-pointer transition-colors hover:bg-white/[0.02] ${
+                    className={`transition-colors hover:bg-white/[0.02] ${
                       selectedIds.includes(String(record.id))
                         ? "bg-indigo-500/5"
                         : ""
@@ -394,25 +415,36 @@ export default function AttendancePage() {
                       />
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${getAttendanceStatusClasses(
-                          record.status,
-                        )}`}
-                      >
-                        {record.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-300">
-                      {formatAttendanceDate(record.timestamp)}
+                      <p className="font-semibold text-indigo-400">
+                        <Link
+                          href={`/dashboard/attendance/${record.id}`}
+                          className="transition-colors hover:text-indigo-300"
+                        >
+                          {record.requestId}
+                        </Link>
+                      </p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-indigo-400">
-                        {record.requestId}
+                      <StatusChip tone={getAttendanceStatusTone(record.status)}>
+                        {record.status}
+                      </StatusChip>
+                    </td>
+                    <td className="px-4 py-3 text-slate-300">
+                      <p className="text-slate-200">
+                        {formatAttendanceDate(record.timestamp)}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {getAttendanceRouteType(record) === "INTER_SITE"
+                          ? "Inter site"
+                          : "Intra city"}
                       </p>
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-200">
                         {record.driverName}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {record.requestId}
                       </p>
                     </td>
                     <td className="px-4 py-3">
@@ -427,39 +459,42 @@ export default function AttendancePage() {
                         {record.vehicleType} - {record.vehicleNumber}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-300">
-                      {record.adminName}
+                    <td className="px-4 py-3">
+                      <p className="text-slate-200">{record.adminName}</p>
+                      <p className="text-xs text-slate-500">Slip admin</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-300">
-                      {record.fatherName}
+                    <td className="px-4 py-3">
+                      <p className="text-slate-200">{record.fatherName}</p>
+                      <p className="text-xs text-slate-500">Family record</p>
                     </td>
                     <td className="px-4 py-3">
                       {record.geoTagPhotoUrl ? (
-                        <Link
-                          href={record.geoTagPhotoUrl}
-                          target="_blank"
-                          className="inline-flex items-center gap-2 text-xs text-indigo-400 transition-colors hover:text-indigo-300"
-                        >
-                          <ImageIcon size={14} />
-                          View Photo
-                        </Link>
+                        <StatusChip tone="emerald">
+                          <ImageIcon size={12} />
+                          Uploaded
+                        </StatusChip>
                       ) : (
-                        <span className="text-xs text-slate-500">Pending Upload</span>
+                        <StatusChip tone="amber">
+                          Pending
+                        </StatusChip>
                       )}
                     </td>
                     <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-end gap-1">
                         {record.geoTagPhotoUrl ? (
-                          <Link
-                            href={record.geoTagPhotoUrl}
-                            target="_blank"
-                            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-indigo-500/10 hover:text-indigo-400"
-                          >
-                            <Eye size={16} />
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-slate-500">-</span>
-                        )}
+                          <ActionIconButton
+                            onClick={() => setPreviewData({ url: record.geoTagPhotoUrl!, title: `Geo Tag - ${record.requestId}` })}
+                            icon={ZoomIn}
+                            label="Preview geo tag photo"
+                            tone="emerald"
+                          />
+                        ) : null}
+                        <ActionIconButton
+                          href={`/dashboard/attendance/${record.id}`}
+                          icon={Eye}
+                          label="View attendance"
+                          tone="indigo"
+                        />
                       </div>
                     </td>
                   </tr>
@@ -467,8 +502,16 @@ export default function AttendancePage() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
+      </RegisterTableShell>
+
+      {previewData && (
+        <ImagePreviewModal
+          isOpen={!!previewData}
+          onClose={() => setPreviewData(null)}
+          imageUrl={previewData.url}
+          title={previewData.title}
+        />
+      )}
     </div>
   );
 }

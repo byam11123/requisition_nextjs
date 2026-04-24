@@ -3,9 +3,25 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
-  Search, Download, Trash2, Plus, Eye, Wrench, Truck,
+  Search, Trash2, Plus, Eye, Wrench, Truck,
   Clock, ReceiptText
 } from 'lucide-react';
+import FilterDropdown, {
+  type FilterDropdownOption,
+} from '@/components/ui/filter-dropdown';
+import ActionIconButton from '@/components/ui/action-icon-button';
+import ExportMenu from '@/app/dashboard/components/export-menu';
+import {
+  downloadRegisterCsv,
+  openRegisterPdf,
+} from '@/app/dashboard/components/export-utils';
+import PageHeader from '@/app/dashboard/components/page-header';
+import RegisterTableShell from '@/app/dashboard/components/register-table-shell';
+import StatusChip, {
+  type StatusChipTone,
+} from '@/components/ui/status-chip';
+import StatCard from '@/components/ui/stat-card';
+import ConfirmationModal from '@/components/ui/confirmation-modal';
 
 type DashboardUser = {
   role?: string;
@@ -14,6 +30,7 @@ type DashboardUser = {
 type RepairRow = {
   id: string | number;
   requestId?: string;
+  warrantyStatus?: string;
   priority?: string;
   itemDescription?: string;
   siteAddress?: string;
@@ -43,6 +60,18 @@ function getStoredUser(): DashboardUser | null {
   }
 }
 
+function isInWarrantyRepair(row: RepairRow) {
+  return String(row.warrantyStatus || "OUT_OF_WARRANTY").toUpperCase().trim() === "IN_WARRANTY";
+}
+
+function getRepairApprovalDisplay(row: RepairRow) {
+  return isInWarrantyRepair(row) ? "SKIPPED" : row.approvalStatus || "PENDING";
+}
+
+function getRepairPaymentDisplay(row: RepairRow) {
+  return isInWarrantyRepair(row) ? "SKIPPED" : row.paymentStatus || "NOT_DONE";
+}
+
 export default function RepairDashboard() {
   const [user] = useState<DashboardUser | null>(() => getStoredUser());
   const [rows, setRows] = useState<RepairRow[]>([]);
@@ -56,6 +85,7 @@ export default function RepairDashboard() {
   const [rowsPerPage] = useState(10);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     const loadRows = async () => {
@@ -77,8 +107,8 @@ export default function RepairDashboard() {
   }, []);
 
   const stats = useMemo(() => ({
-    pending: rows.filter(r => r.approvalStatus === 'PENDING').length,
-    approved: rows.filter(r => r.approvalStatus === 'APPROVED' && (r.dispatchStatus === 'NOT_DISPATCHED' || r.deliveryStatus === 'NOT_DELIVERED')).length,
+    pending: rows.filter(r => !isInWarrantyRepair(r) && r.approvalStatus === 'PENDING').length,
+    approved: rows.filter(r => (isInWarrantyRepair(r) || r.approvalStatus === 'APPROVED') && (r.dispatchStatus === 'NOT_DISPATCHED' || r.deliveryStatus === 'NOT_DELIVERED')).length,
     inTransit: rows.filter(r => r.dispatchStatus === 'DISPATCHED' && r.deliveryStatus === 'NOT_DELIVERED').length,
     total: rows.length,
   }), [rows]);
@@ -86,8 +116,8 @@ export default function RepairDashboard() {
   const filtered = useMemo(() => {
     let f = [...rows];
     // Shortcut filters from stat cards
-    if (activeStatFilter === 'PENDING') f = f.filter(r => r.approvalStatus === 'PENDING');
-    else if (activeStatFilter === 'APPROVED') f = f.filter(r => r.approvalStatus === 'APPROVED');
+    if (activeStatFilter === 'PENDING') f = f.filter(r => getRepairApprovalDisplay(r) === 'PENDING');
+    else if (activeStatFilter === 'APPROVED') f = f.filter(r => getRepairApprovalDisplay(r) === 'APPROVED' || getRepairApprovalDisplay(r) === 'SKIPPED');
     else if (activeStatFilter === 'TRANSIT') f = f.filter(r => r.dispatchStatus === 'DISPATCHED' && r.deliveryStatus === 'NOT_DELIVERED');
 
     // Text search
@@ -103,7 +133,7 @@ export default function RepairDashboard() {
     }
 
     // Dropdown filters
-    if (approvalFilter !== 'ALL') f = f.filter(r => r.approvalStatus === approvalFilter);
+    if (approvalFilter !== 'ALL') f = f.filter(r => getRepairApprovalDisplay(r) === approvalFilter);
     if (priorityFilter !== 'ALL') f = f.filter(r => r.priority === priorityFilter);
 
     return f;
@@ -123,11 +153,9 @@ export default function RepairDashboard() {
       : setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])));
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${selectedIds.length} selected repair requests?`)) return;
     setDeleting(true);
     try {
       const token = localStorage.getItem('token');
-      // For now, we reuse the pattern but note that we might need a specific repair bulk delete endpoint if it differs
       await fetch('/api/repair-maintainance/bulk-delete', {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -143,60 +171,54 @@ export default function RepairDashboard() {
       alert('Delete failed');
     } finally {
       setDeleting(false);
+      setDeleteModalOpen(false);
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format: 'csv' | 'pdf') => {
     setExporting(true);
     try {
       const exportSource =
         selectedIds.length > 0
           ? filtered.filter((row) => selectedIds.includes(String(row.id)))
           : filtered;
-      const csvRows = [
-        [
-          "Job ID",
-          "Priority",
-          "Item Description",
-          "Site Address",
-          "Requested By",
-          "Approval Status",
-          "Payment Status",
-          "Dispatch Status",
-          "Delivery Status",
-          "Timestamp",
+      const exportConfig = {
+        filename: format === 'csv' ? 'repair-register.csv' : 'repair-register.pdf',
+        title: 'Repair & Maintenance Register',
+        subtitle:
+          'Breakdown requests, repair workflow status, payment progress, dispatch, and delivery tracking.',
+        countLabel: 'repair cases',
+        columns: [
+          { label: 'Job ID' },
+          { label: 'Priority' },
+          { label: 'Item Description' },
+          { label: 'Site Address' },
+          { label: 'Requested By' },
+          { label: 'Approval Status' },
+          { label: 'Payment Status' },
+          { label: 'Dispatch Status' },
+          { label: 'Delivery Status' },
+          { label: 'Timestamp' },
         ],
-        ...exportSource.map((row) => [
+        rows: exportSource.map((row) => [
           row.requestId,
           row.priority,
-          row.itemDescription || "",
-          row.siteAddress || "",
-          row.repairRequisitionByName || "",
-          row.approvalStatus || "",
-          row.paymentStatus || "",
-          row.dispatchStatus || "",
-          row.deliveryStatus || "",
-          formatDate(row.timestamp),
+          row.itemDescription || '',
+          row.siteAddress || '',
+          row.repairRequisitionByName || '',
+          getRepairApprovalDisplay(row),
+          getRepairPaymentDisplay(row),
+          row.dispatchStatus || '',
+          row.deliveryStatus || '',
+          formatDate(row.timestamp || ''),
         ]),
-      ];
+      };
 
-      const csvContent = csvRows
-        .map((columns) =>
-          columns
-            .map((value) => `"${String(value).replace(/"/g, '""')}"`)
-            .join(","),
-        )
-        .join("\n");
-
-      const blob = new Blob([csvContent], {
-        type: "text/csv;charset=utf-8;",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "repair-register.csv";
-      link.click();
-      window.URL.revokeObjectURL(url);
+      if (format === 'csv') {
+        downloadRegisterCsv(exportConfig);
+      } else {
+        openRegisterPdf(exportConfig);
+      }
     } finally {
       setExporting(false);
     }
@@ -208,26 +230,22 @@ export default function RepairDashboard() {
     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
-  const priorityBadge = (p: string) => {
-    const map: Record<string, string> = {
-      URGENT: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-      HIGH: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      NORMAL: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
-      LOW: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-    };
-    return `inline-flex px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full border ${map[p] || map.NORMAL}`;
+  const getPriorityTone = (priority: string): StatusChipTone => {
+    if (priority === 'URGENT') return 'rose';
+    if (priority === 'HIGH') return 'amber';
+    if (priority === 'LOW') return 'sky';
+    return 'slate';
   };
 
-  const statusBadge = (s: string) => {
-    const map: Record<string, string> = {
-      APPROVED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      REJECTED: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-      HOLD: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-      DELIVERED: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-      DISPATCHED: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-    };
-    return `inline-flex px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full border ${map[s] || 'bg-slate-500/10 text-slate-400 border-slate-500/20'}`;
+  const getStatusTone = (status: string): StatusChipTone => {
+    if (status === 'SKIPPED') return 'slate';
+    if (status === 'APPROVED') return 'emerald';
+    if (status === 'PENDING') return 'amber';
+    if (status === 'REJECTED') return 'rose';
+    if (status === 'HOLD') return 'orange';
+    if (status === 'DELIVERED') return 'indigo';
+    if (status === 'DISPATCHED') return 'sky';
+    return 'slate';
   };
 
   const statData = [
@@ -237,101 +255,125 @@ export default function RepairDashboard() {
     { title: 'Total Cases', value: stats.total, icon: ReceiptText, color: 'purple', filter: 'ALL' as const },
   ];
 
-  const colorMap: Record<string, string> = {
-    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-    sky: 'bg-sky-500/10 text-sky-400 border-sky-500/30',
-    purple: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-  };
+  const approvalOptions: FilterDropdownOption<string>[] = [
+    { value: 'ALL', label: 'All Approval' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'APPROVED', label: 'Approved' },
+    { value: 'SKIPPED', label: 'Skipped' },
+    { value: 'REJECTED', label: 'Rejected' },
+    { value: 'HOLD', label: 'Hold' },
+  ];
+
+  const priorityOptions: FilterDropdownOption<string>[] = [
+    { value: 'ALL', label: 'All Priority' },
+    { value: 'URGENT', label: 'Urgent' },
+    { value: 'HIGH', label: 'High' },
+    { value: 'NORMAL', label: 'Normal' },
+    { value: 'LOW', label: 'Low' },
+  ];
 
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">Repair & Maintenance</h1>
-          <p className="text-slate-400 text-sm mt-1">Manage breakdown requests and equipment servicing.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <PageHeader
+        title="Repair & Maintenance"
+        subtitle="Manage breakdown requests and equipment servicing."
+        actions={
+          <>
           {selectedIds.length > 0 && user?.role === 'ADMIN' && (
-            <button onClick={handleBulkDelete} disabled={deleting}
+            <button onClick={() => setDeleteModalOpen(true)} disabled={deleting}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-50">
               <Trash2 size={16} />
               {deleting ? 'Deleting...' : `Delete (${selectedIds.length})`}
             </button>
           )}
-          <button onClick={handleExport} disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 transition-colors disabled:opacity-50">
-            <Download size={16} />
-            {selectedIds.length > 0 ? `Export (${selectedIds.length})` : 'Export All'}
-          </button>
+          <ExportMenu
+            exporting={exporting}
+            selectedCount={selectedIds.length}
+            onExportCsv={() => handleExport('csv')}
+            onExportPdf={() => handleExport('pdf')}
+          />
           <Link href="/dashboard/repair-maintainance/create"
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-600/20">
             <Plus size={16} /> New Request
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Selected Repair Requests?"
+        message={`Are you sure you want to delete ${selectedIds.length} selected repair requests? This action cannot be undone.`}
+        confirmLabel="Yes, Delete All"
+        tone="danger"
+      />
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statData.map(s => (
-          <button key={s.filter}
-            onClick={() => setActiveStatFilter(s.filter)}
-            className={`p-4 rounded-xl border flex items-center justify-between transition-all hover:scale-[1.01] ${activeStatFilter === s.filter
-              ? colorMap[s.color]
-              : 'bg-slate-900/50 border-white/5 hover:border-white/10'}`}>
-            <div className="flex items-center gap-3">
-              <div className={`inline-flex p-2 rounded-lg ${colorMap[s.color]}`}>
-                <s.icon size={18} />
-              </div>
-              <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{s.title}</p>
-            </div>
-            <p className="text-2xl font-bold text-slate-100">{s.value}</p>
-          </button>
+          <StatCard key={s.filter}
+            title={s.title}
+            value={s.value}
+            icon={s.icon}
+            tone={s.color as any}
+            active={activeStatFilter === s.filter}
+            onClick={() => setActiveStatFilter(s.filter)} />
         ))}
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-4">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+      <div className="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-3xl p-5 backdrop-blur-xl">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1 group">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--app-muted)] group-focus-within:text-[var(--app-accent)] transition-colors" />
             <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by ID, item, site, vendor or person..."
-              className="w-full bg-slate-950/50 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-slate-200 placeholder:text-slate-600" />
+              className="w-full bg-[var(--app-panel)] border border-[var(--app-border)] rounded-2xl pl-11 pr-4 py-3 text-sm outline-none focus:border-[var(--app-accent-border)] focus:ring-4 focus:ring-[var(--app-accent)]/5 text-[var(--app-text)] placeholder:text-[var(--app-muted)]/50 transition-all" />
           </div>
-          <select value={approvalFilter} onChange={e => setApprovalFilter(e.target.value)}
-            className="bg-slate-950/50 border border-white/5 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-slate-300">
-            <option value="ALL">All Approval</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="HOLD">Hold</option>
-          </select>
-          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-            className="bg-slate-950/50 border border-white/5 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-slate-300">
-            <option value="ALL">All Priority</option>
-            <option value="URGENT">Urgent</option>
-            <option value="HIGH">High</option>
-            <option value="NORMAL">Normal</option>
-            <option value="LOW">Low</option>
-          </select>
+          <div className="flex gap-3">
+            <FilterDropdown
+              label="Approval"
+              value={approvalFilter}
+              options={approvalOptions}
+              onChange={setApprovalFilter}
+            />
+            <FilterDropdown
+              label="Priority"
+              value={priorityFilter}
+              options={priorityOptions}
+              onChange={setPriorityFilter}
+            />
+          </div>
         </div>
       </div>
 
       {/* Table Section */}
-      <div className="bg-slate-900/50 border border-white/5 rounded-2xl overflow-hidden">
-        <div className="p-5 border-b border-white/5 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-slate-100">Repair Case Register</h2>
-          <span className="text-xs text-slate-500">{filtered.length} total results</span>
-        </div>
-        <div className="overflow-x-auto">
+      <RegisterTableShell
+        title="Repair & Maintenance Register"
+        totalCount={filtered.length}
+        footer={
+          filtered.length > rowsPerPage ? (
+            <div className="flex justify-between items-center p-4 border-t border-[var(--app-border)] text-sm text-[var(--app-muted)] bg-[var(--app-panel)]/30">
+              <span>Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filtered.length)} of {filtered.length} requests</span>
+              <div className="flex gap-2">
+                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--app-border)] hover:bg-[var(--app-accent-soft)] transition-colors disabled:opacity-40">Previous</button>
+                <button onClick={() => setPage(p => (p + 1) * rowsPerPage < filtered.length ? p + 1 : p)} disabled={(page + 1) * rowsPerPage >= filtered.length}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--app-border)] hover:bg-[var(--app-accent-soft)] transition-colors disabled:opacity-40">Next</button>
+              </div>
+            </div>
+          ) : null
+        }
+      >
           <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-950/50 text-slate-500 text-xs uppercase tracking-wider">
+            <thead className="bg-[var(--app-panel)]/80 text-[var(--app-muted)] text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3">
                   <input type="checkbox" checked={allVisible} ref={el => { if (el) el.indeterminate = someVisible && !allVisible; }}
-                    onChange={toggleAll} className="rounded border-white/10 bg-slate-800" />
+                    onChange={toggleAll} className="rounded border-[var(--app-border-strong)] bg-[var(--app-bg-secondary)]" />
                 </th>
                 <th className="px-4 py-3">Job ID</th>
                 <th className="px-4 py-3">Priority</th>
@@ -339,21 +381,22 @@ export default function RepairDashboard() {
                 <th className="px-4 py-3">Requested By</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Payment</th>
-                <th className="px-4 py-3">Logistics</th>
+                <th className="px-4 py-3">Dispatch</th>
+                <th className="px-4 py-3">Delivery</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center">
+                  <td colSpan={10} className="py-12 text-center">
                     <div className="inline-block w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-2" />
                     <p className="text-slate-500">Fetching repair cases...</p>
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-500 italic">No matching records found</td>
+                  <td colSpan={10} className="py-12 text-center text-slate-500 italic">No matching records found</td>
                 </tr>
               ) : paginated.map((row) => {
                 const id = String(row.id);
@@ -371,29 +414,43 @@ export default function RepairDashboard() {
                         {row.requestId}
                       </Link>
                     </td>
-                    <td className="px-4 py-3"><span className={priorityBadge(row.priority)}>{row.priority}</span></td>
+                    <td className="px-4 py-3">
+                      <StatusChip tone={getPriorityTone(row.priority || '')}>
+                        <span className="flex items-center gap-1.5">
+                          {row.priority}
+                          {row.priority === 'URGENT' && (
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                            </span>
+                          )}
+                        </span>
+                      </StatusChip>
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-200 truncate max-w-48">{row.itemDescription || 'Untitled Item'}</p>
                       <p className="text-slate-500 text-xs">{row.siteAddress || 'N/A'}</p>
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-slate-300">{row.repairRequisitionByName || '-'}</p>
-                      <p className="text-slate-500 text-xs">{formatDate(row.timestamp)}</p>
+                      <p className="text-slate-500 text-xs">{formatDate(row.timestamp || '')}</p>
                     </td>
-                    <td className="px-4 py-3"><span className={statusBadge(row.approvalStatus)}>{row.approvalStatus}</span></td>
-                    <td className="px-4 py-3"><span className={statusBadge(row.paymentStatus === 'DONE' ? 'APPROVED' : '')}>{row.paymentStatus}</span></td>
+                    <td className="px-4 py-3"><StatusChip tone={getStatusTone(getRepairApprovalDisplay(row))}>{getRepairApprovalDisplay(row)}</StatusChip></td>
+                    <td className="px-4 py-3"><StatusChip tone={getStatusTone(getRepairPaymentDisplay(row))}>{getRepairPaymentDisplay(row)}</StatusChip></td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={statusBadge(row.dispatchStatus === 'DISPATCHED' ? 'DISPATCHED' : '')}>{row.dispatchStatus}</span>
-                        <span className={statusBadge(row.deliveryStatus === 'DELIVERED' ? 'DELIVERED' : '')}>{row.deliveryStatus}</span>
-                      </div>
+                      <StatusChip tone={getStatusTone(row.dispatchStatus || 'NOT_DISPATCHED')}>{row.dispatchStatus}</StatusChip>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusChip tone={getStatusTone(row.deliveryStatus || 'NOT_DELIVERED')}>{row.deliveryStatus}</StatusChip>
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end">
-                        <Link href={`/dashboard/repair-maintainance/${id}`}
-                          className="p-2 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors">
-                          <Eye size={18} />
-                        </Link>
+                        <ActionIconButton
+                          href={`/dashboard/repair-maintainance/${id}`}
+                          icon={Eye}
+                          label="View repair request"
+                          tone="indigo"
+                        />
                       </div>
                     </td>
                   </tr>
@@ -401,21 +458,7 @@ export default function RepairDashboard() {
               })}
             </tbody>
           </table>
-        </div>
-
-        {/* Pagination */}
-        {filtered.length > rowsPerPage && (
-          <div className="flex justify-between items-center p-4 border-t border-white/5 text-sm text-slate-400 bg-slate-950/20">
-            <span>Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filtered.length)} of {filtered.length} requests</span>
-            <div className="flex gap-2">
-              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-40">Previous</button>
-              <button onClick={() => setPage(p => (p + 1) * rowsPerPage < filtered.length ? p + 1 : p)} disabled={(page + 1) * rowsPerPage >= filtered.length}
-                className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-40">Next</button>
-            </div>
-          </div>
-        )}
-      </div>
+      </RegisterTableShell>
     </div>
   );
 }

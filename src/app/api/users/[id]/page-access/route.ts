@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { findDevUserById } from "@/lib/dev-auth-store";
-import { DASHBOARD_PAGE_OPTIONS, normalizeDashboardPageAccess } from "@/lib/page-access";
+import { findDevUserById } from "@/lib/stores/dev-auth-store";
+import { DASHBOARD_PAGE_OPTIONS, normalizeDashboardPageAccess } from "@/lib/config/page-access";
 import { prisma } from "@/lib/prisma";
-import { saveUserPageAccess } from "@/lib/user-page-access-store";
+import { saveUserPageAccess } from "@/lib/stores/user-page-access-store";
 
 export async function PUT(
   req: NextRequest,

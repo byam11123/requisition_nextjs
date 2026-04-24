@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {
   DashboardPageKey,
   normalizeDashboardPageAccess,
-} from "@/lib/page-access";
+} from "@/lib/config/page-access";
 
 const USER_PAGE_ACCESS_ENTITY_TYPE = "USER_PAGE_ACCESS";
 const g = globalThis as typeof globalThis & {
@@ -50,16 +50,14 @@ export async function getUserPageAccess(userId: bigint | string) {
   }
 
   try {
-    const latestEntry = await prisma.syncLog.findFirst({
-      where: {
-        entityType: USER_PAGE_ACCESS_ENTITY_TYPE,
-        entityId: userId,
-      },
-      orderBy: { createdAt: "desc" },
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { pageAccessOverride: true },
     });
 
-    return parsePayload(latestEntry?.payload || null)?.pages || fallbackValue;
-  } catch {
+    return parsePayload(user?.pageAccessOverride || null)?.pages || fallbackValue;
+  } catch (error) {
+    console.error("Error fetching user page access from DB:", error);
     return fallbackValue;
   }
 }
@@ -85,23 +83,20 @@ export async function getUserPageAccessMap(userIds: Array<bigint | string>) {
   }
 
   try {
-    const entries = await prisma.syncLog.findMany({
-      where: {
-        entityType: USER_PAGE_ACCESS_ENTITY_TYPE,
-        entityId: { in: bigintIds },
-      },
-      orderBy: { createdAt: "desc" },
+    const users = await prisma.user.findMany({
+      where: { id: { in: bigintIds } },
+      select: { id: true, pageAccessOverride: true },
     });
 
-    for (const entry of entries) {
-      const key = entry.entityId?.toString();
-      if (!key || (map.get(key) && map.get(key)?.length)) {
-        continue;
+    for (const user of users) {
+      const key = user.id.toString();
+      const dbPages = parsePayload(user.pageAccessOverride)?.pages;
+      if (dbPages) {
+        map.set(key, dbPages);
       }
-
-      map.set(key, parsePayload(entry.payload || null)?.pages || map.get(key) || null);
     }
-  } catch {
+  } catch (error) {
+    console.error("Error fetching user page access map from DB:", error);
     return map;
   }
 
@@ -121,19 +116,14 @@ export async function saveUserPageAccess(
 
   if (typeof userId === "bigint") {
     try {
-      await prisma.syncLog.create({
+      await prisma.user.update({
+        where: { id: userId },
         data: {
-          userId,
-          entityType: USER_PAGE_ACCESS_ENTITY_TYPE,
-          entityId: userId,
-          operation: Prisma.SyncOperation.UPDATE,
-          payload: JSON.stringify({ pages: normalizedPages } satisfies UserPageAccessPayload),
-          synced: true,
-          syncAt: new Date(),
+          pageAccessOverride: JSON.stringify({ pages: normalizedPages }),
         },
       });
-    } catch {
-      // Keep in-memory access available even when the database is offline.
+    } catch (error) {
+      console.error("Error saving user page access to DB:", error);
     }
   }
 

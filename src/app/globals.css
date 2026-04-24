@@ -1,5 +1,217 @@
 @import "tailwindcss";
 
+:root,
+html[data-theme="indigo"] {
+  --app-bg: #020617;
+  --app-bg-secondary: #0f172a;
+  --app-surface: rgba(15, 23, 42, 0.82);
+  --app-surface-strong: rgba(15, 23, 42, 0.96);
+  --app-panel: rgba(2, 6, 23, 0.46);
+  --app-surface-solid: #111c32;
+  --app-surface-strong-solid: #0c162b;
+  --app-panel-solid: #0a1426;
+  --app-border: rgba(148, 163, 184, 0.14);
+  --app-border-strong: rgba(148, 163, 184, 0.22);
+  --app-border-solid: rgba(148, 163, 184, 0.24);
+  --app-border-strong-solid: rgba(148, 163, 184, 0.34);
+  --app-text: #f0f7ff;
+  --app-muted: #94a3b8;
+  --app-accent: #818cf8;
+  --app-accent-hover: #a5b4fc;
+  --app-accent-strong: #c7d2fe;
+  --app-accent-soft: rgba(129, 140, 248, 0.12);
+  --app-accent-border: rgba(129, 140, 248, 0.32);
+  --app-glow: rgba(129, 140, 248, 0.15);
+  --app-logo-start: #818cf8;
+  --app-logo-end: #c084fc;
+  --theme-accent-rgb: 129 140 248;
+  --app-sidebar-wash: linear-gradient(180deg, rgba(99, 102, 241, 0.10), transparent 24%);
+}
+
+html[data-theme="emerald"] {
+  --app-bg: #04120f;
+  --app-bg-secondary: #0b1f1b;
+  --app-surface: rgba(7, 22, 18, 0.84);
+  --app-surface-strong: rgba(8, 28, 23, 0.96);
+  --app-panel: rgba(2, 17, 14, 0.48);
+  --app-surface-solid: #0d211c;
+  --app-surface-strong-solid: #091a16;
+  --app-panel-solid: #071612;
+  --app-border: rgba(94, 234, 212, 0.14);
+  --app-border-strong: rgba(45, 212, 191, 0.25);
+  --app-border-solid: rgba(45, 212, 191, 0.24);
+  --app-border-strong-solid: rgba(45, 212, 191, 0.34);
+  --app-text: #f0fffb;
+  --app-muted: #94c5c0;
+  --app-accent: #34d399;
+  --app-accent-hover: #10b981;
+  --app-accent-strong: #6ee7b7;
+  --app-accent-soft: rgba(52, 211, 153, 0.12);
+  --app-accent-border: rgba(52, 211, 153, 0.3);
+  --app-glow: rgba(52, 211, 153, 0.16);
+  --app-logo-start: #34d399;
+  --app-logo-end: #2dd4bf;
+  --theme-accent-rgb: 52 211 153;
+  --app-sidebar-wash: linear-gradient(180deg, rgba(16, 185, 129, 0.11), transparent 24%);
+}
+
+html[data-theme="crimson"] {
+  --app-bg: #12050b;
+  --app-bg-secondary: #1f0d16;
+  --app-bg: #0d0e12;
+  --app-bg-secondary: #16181d;
+  --app-surface: rgba(22, 24, 29, 0.86);
+  --app-surface-strong: rgba(22, 24, 29, 0.97);
+  --app-panel: rgba(15, 17, 21, 0.48);
+  --app-text: #fff1f5;
+  --app-muted: #d4a5b5;
+  --app-accent: #fb7185;
+  --app-accent-hover: #f43f5e;
+  --app-accent-strong: #fda4af;
+  --app-accent-soft: rgba(251, 113, 133, 0.12);
+  --app-accent-border: rgba(251, 113, 133, 0.3);
+  --app-glow: rgba(251, 113, 133, 0.15);
+  --app-logo-start: #fb7185;
+  --app-logo-end: #f43f5e;
+  --theme-accent-rgb: 251 113 133;
+  --app-sidebar-wash: linear-gradient(180deg, rgba(244, 63, 94, 0.10), transparent 24%);
+}
+
+html[data-theme="amber"] {
+  --app-bg: #120c03;
+  --app-bg-secondary: #1f1609;
+  --app-surface: rgba(27, 18, 8, 0.84);
+  --app-surface-strong: rgba(35, 24, 9, 0.96);
+  --app-panel: rgba(22, 15, 6, 0.48);
+  --app-surface-solid: #2a1b08;
+  --app-surface-strong-solid: #201506;
+  --app-panel-solid: #181004;
+  --app-border: rgba(251, 191, 36, 0.14);
+  --app-border-strong: rgba(251, 191, 36, 0.24);
+  --app-border-solid: rgba(251, 191, 36, 0.24);
+  --app-border-strong-solid: rgba(251, 191, 36, 0.34);
+  --app-text: #fff8eb;
+  --app-muted: #d8bb8c;
+  --app-accent: #f59e0b;
+  --app-accent-hover: #fbbf24;
+  --app-accent-strong: #fde68a;
+  --app-accent-soft: rgba(245, 158, 11, 0.13);
+  --app-accent-border: rgba(245, 158, 11, 0.3);
+  --app-glow: rgba(245, 158, 11, 0.2);
+  --app-logo-start: #f59e0b;
+  --app-logo-end: #f97316;
+  --theme-accent-rgb: 245 158 11;
+  --app-sidebar-wash: linear-gradient(180deg, rgba(245, 158, 11, 0.11), transparent 24%);
+}
+
+html[data-theme="orange-steel"] {
+  --app-bg: #eef2f7;
+  --app-bg-secondary: #d8dee8;
+  --app-surface: rgba(255, 255, 255, 0.86);
+  --app-surface-strong: rgba(255, 255, 255, 0.96);
+  --app-panel: rgba(255, 255, 255, 0.72);
+  --app-surface-solid: #ffffff;
+  --app-surface-strong-solid: #f8fafc;
+  --app-panel-solid: #edf2f7;
+  --app-border: rgba(100, 116, 139, 0.18);
+  --app-border-strong: rgba(100, 116, 139, 0.28);
+  --app-border-solid: rgba(100, 116, 139, 0.22);
+  --app-border-strong-solid: rgba(100, 116, 139, 0.34);
+  --app-text: #111827;
+  --app-muted: #4b5563;
+  --app-accent: #f97316;
+  --app-accent-hover: #ea580c;
+  --app-accent-strong: #c2410c;
+  --app-accent-soft: rgba(249, 115, 22, 0.12);
+  --app-accent-border: rgba(249, 115, 22, 0.32);
+  --app-glow: rgba(249, 115, 22, 0.16);
+  --app-logo-start: #f97316;
+  --app-logo-end: #fb923c;
+  --theme-accent-rgb: 249 115 22;
+  --app-sidebar-wash: linear-gradient(180deg, rgba(249, 115, 22, 0.10), transparent 24%);
+}
+
+html[data-theme="teal-mist"] {
+  --app-bg: #edf7f7;
+  --app-bg-secondary: #d9ecec;
+  --app-surface: rgba(255, 255, 255, 0.88);
+  --app-surface-strong: rgba(255, 255, 255, 0.97);
+  --app-panel: rgba(255, 255, 255, 0.76);
+  --app-surface-solid: #ffffff;
+  --app-surface-strong-solid: #f4fbfb;
+  --app-panel-solid: #eaf4f4;
+  --app-border: rgba(100, 116, 139, 0.16);
+  --app-border-strong: rgba(100, 116, 139, 0.26);
+  --app-border-solid: rgba(100, 116, 139, 0.22);
+  --app-border-strong-solid: rgba(100, 116, 139, 0.34);
+  --app-text: #111827;
+  --app-muted: #475569;
+  --app-accent: #0f766e;
+  --app-accent-hover: #0d9488;
+  --app-accent-strong: #115e59;
+  --app-accent-soft: rgba(15, 118, 110, 0.12);
+  --app-accent-border: rgba(15, 118, 110, 0.28);
+  --app-glow: rgba(15, 118, 110, 0.12);
+  --app-logo-start: #0f766e;
+  --app-logo-end: #14b8a6;
+  --theme-accent-rgb: 15 118 110;
+  --app-sidebar-wash: linear-gradient(180deg, rgba(15, 118, 110, 0.10), transparent 24%);
+}
+
+html[data-theme="rose-paper"] {
+  --app-bg: #fff3f7;
+  --app-bg-secondary: #fbe5ec;
+  --app-surface: rgba(255, 255, 255, 0.90);
+  --app-surface-strong: rgba(255, 255, 255, 0.98);
+  --app-panel: rgba(255, 255, 255, 0.78);
+  --app-surface-solid: #ffffff;
+  --app-surface-strong-solid: #fff8fb;
+  --app-panel-solid: #fdf0f5;
+  --app-border: rgba(148, 163, 184, 0.16);
+  --app-border-strong: rgba(148, 163, 184, 0.26);
+  --app-border-solid: rgba(148, 163, 184, 0.22);
+  --app-border-strong-solid: rgba(148, 163, 184, 0.34);
+  --app-text: #1f1720;
+  --app-muted: #655866;
+  --app-accent: #e11d48;
+  --app-accent-hover: #f43f5e;
+  --app-accent-strong: #be123c;
+  --app-accent-soft: rgba(225, 29, 72, 0.12);
+  --app-accent-border: rgba(225, 29, 72, 0.28);
+  --app-glow: rgba(225, 29, 72, 0.11);
+  --app-logo-start: #e11d48;
+  --app-logo-end: #fb7185;
+  --theme-accent-rgb: 225 29 72;
+  --app-sidebar-wash: linear-gradient(180deg, rgba(225, 29, 72, 0.10), transparent 24%);
+}
+
+html[data-theme="sky-paper"] {
+  --app-bg: #f1f8ff;
+  --app-bg-secondary: #e1edf8;
+  --app-surface: rgba(255, 255, 255, 0.89);
+  --app-surface-strong: rgba(255, 255, 255, 0.98);
+  --app-panel: rgba(255, 255, 255, 0.76);
+  --app-surface-solid: #ffffff;
+  --app-surface-strong-solid: #f7fbff;
+  --app-panel-solid: #edf4fb;
+  --app-border: rgba(100, 116, 139, 0.16);
+  --app-border-strong: rgba(100, 116, 139, 0.26);
+  --app-border-solid: rgba(100, 116, 139, 0.22);
+  --app-border-strong-solid: rgba(100, 116, 139, 0.34);
+  --app-text: #0f172a;
+  --app-muted: #475569;
+  --app-accent: #0284c7;
+  --app-accent-hover: #0ea5e9;
+  --app-accent-strong: #0369a1;
+  --app-accent-soft: rgba(2, 132, 199, 0.12);
+  --app-accent-border: rgba(2, 132, 199, 0.28);
+  --app-glow: rgba(2, 132, 199, 0.12);
+  --app-logo-start: #0284c7;
+  --app-logo-end: #38bdf8;
+  --theme-accent-rgb: 2 132 199;
+  --app-sidebar-wash: linear-gradient(180deg, rgba(2, 132, 199, 0.10), transparent 24%);
+}
+
 @theme {
   --font-sans: var(--font-expose), "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --animate-fade-in-up: fade-in-up 0.5s ease-out;
@@ -16,9 +228,143 @@
 }
 
 @layer base {
+  html {
+    background: var(--app-bg);
+    font-size: 106.25%; /* Increases base font from 16px to 17px */
+    letter-spacing: -0.011em;
+  }
+
   body {
     @apply m-0;
+    background:
+      radial-gradient(circle at top right, var(--app-glow), transparent 32%),
+      linear-gradient(180deg, var(--app-bg-secondary), var(--app-bg));
+    color: var(--app-text);
+    transition:
+      background 220ms ease,
+      color 220ms ease;
   }
+
+  body::selection {
+    background: var(--app-accent);
+    color: white;
+  }
+}
+
+.app-body {
+  background: transparent;
+  color: var(--app-text);
+}
+
+[data-surface-style="solid"] {
+  --app-surface: var(--app-surface-solid);
+  --app-surface-strong: var(--app-surface-strong-solid);
+  --app-panel: var(--app-panel-solid);
+  --app-border: var(--app-border-solid);
+  --app-border-strong: var(--app-border-strong-solid);
+  --app-sidebar-wash: none;
+}
+
+.app-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  min-height: 100vh;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top right, var(--app-glow), transparent 28%),
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.03), transparent 18%);
+}
+
+.bg-indigo-600 {
+  background-color: var(--app-accent) !important;
+}
+
+.hover\:bg-indigo-500:hover {
+  background-color: var(--app-accent-hover) !important;
+}
+
+.text-indigo-400,
+.hover\:text-indigo-400:hover {
+  color: var(--app-accent) !important;
+}
+
+.text-indigo-300,
+.text-indigo-200,
+.hover\:text-indigo-300:hover {
+  color: var(--app-accent-strong) !important;
+}
+
+.bg-indigo-500\/10,
+.hover\:bg-indigo-500\/10:hover {
+  background-color: rgb(var(--theme-accent-rgb) / 0.1) !important;
+}
+
+.bg-indigo-500\/5,
+.hover\:bg-indigo-500\/5:hover {
+  background-color: rgb(var(--theme-accent-rgb) / 0.05) !important;
+}
+
+.border-indigo-500\/50,
+.focus\:border-indigo-500\/50:focus,
+.hover\:border-indigo-500:hover {
+  border-color: rgb(var(--theme-accent-rgb) / 0.5) !important;
+}
+
+.border-indigo-500\/30 {
+  border-color: rgb(var(--theme-accent-rgb) / 0.3) !important;
+}
+
+.shadow-indigo-600\/20,
+.shadow-indigo-500\/20 {
+  --tw-shadow-color: rgb(var(--theme-accent-rgb) / 0.2) !important;
+}
+
+.bg-slate-950,
+.bg-slate-950\/50,
+.bg-slate-950\/40,
+.bg-slate-950\/30,
+.bg-slate-950\/20,
+.bg-slate-900,
+.bg-slate-900\/95,
+.bg-slate-900\/80,
+.bg-slate-900\/70,
+.bg-slate-900\/60,
+.bg-slate-900\/55,
+.bg-slate-900\/50,
+.bg-slate-800,
+.bg-slate-800\/50 {
+  background-color: var(--app-surface-strong) !important;
+}
+
+.bg-white\/\[0\.03\],
+.bg-white\/5,
+.bg-white\/10 {
+  background-color: var(--app-panel) !important;
+}
+
+.text-slate-100,
+.text-slate-200,
+.text-slate-300 {
+  color: var(--app-text) !important;
+  font-weight: 500;
+}
+
+.text-slate-400,
+.text-slate-500,
+.text-slate-600 {
+  color: var(--app-muted) !important;
+}
+
+.border-white\/5,
+.border-white\/10,
+.border-white\/20,
+.border-white\/30 {
+  border-color: var(--app-border) !important;
+}
+
+.border-slate-500\/20 {
+  border-color: var(--app-border) !important;
 }
 
 /* Custom scrollbar for webkit */
@@ -38,4 +384,52 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+html[data-theme="orange-steel"] ::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.28);
+}
+
+html[data-theme="orange-steel"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.42);
+}
+
+[data-theme-mode="light"] {
+  color-scheme: light;
+}
+
+[data-theme-mode="light"] .bg-slate-950,
+[data-theme-mode="light"] .bg-slate-950\/50,
+[data-theme-mode="light"] .bg-slate-900\/50,
+[data-theme-mode="light"] .bg-slate-900\/55,
+[data-theme-mode="light"] .bg-slate-950\/30,
+[data-theme-mode="light"] .bg-slate-950\/20,
+[data-theme-mode="light"] .bg-slate-800 {
+  background-color: var(--app-surface-strong) !important;
+}
+
+[data-theme-mode="light"] .text-slate-100,
+[data-theme-mode="light"] .text-slate-200,
+[data-theme-mode="light"] .text-slate-300 {
+  color: var(--app-text) !important;
+  font-weight: 600;
+}
+
+[data-theme-mode="light"] .text-slate-400,
+[data-theme-mode="light"] .text-slate-500,
+[data-theme-mode="light"] .text-slate-600 {
+  color: var(--app-muted) !important;
+}
+
+[data-theme-mode="light"] .border-white\/5,
+[data-theme-mode="light"] .border-white\/10 {
+  border-color: var(--app-border) !important;
+}
+
+[data-theme-mode="light"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--app-border) !important;
+}
+
+[data-theme-mode="light"] thead.bg-slate-950\/50 {
+  background-color: #eef2f7 !important;
 }

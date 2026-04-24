@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 
 import { getUserFromRequest } from "@/lib/auth";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { prisma } from "@/lib/prisma";
 
 declare global {
@@ -13,6 +14,8 @@ declare global {
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
+
+hydrateDemoModuleGlobals();
 
 const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
 const MODULE_KEY = "SALARY_ADVANCE";
@@ -42,6 +45,8 @@ type SalaryAdvanceRecord = {
   deductionHistory: SalaryAdvanceDeduction[];
   totalDeducted: number;
   balanceAdvance: number;
+  approvedAt?: string | null;
+  approvedByName?: string | null;
 };
 
 type SalaryAdvanceMeta = {
@@ -74,6 +79,10 @@ type SalaryAdvanceRow = {
   description?: string | null;
   materialPhotoUrl?: string | null;
   cardSubtitleInfo?: string | null;
+  approvedAt?: Date | string | null;
+  approvedBy?: {
+    fullName?: string | null;
+  } | null;
 };
 
 const g = globalThis as SalaryAdvanceStoreGlobal;
@@ -139,6 +148,13 @@ const mapSalaryAdvanceRecord = (row: SalaryAdvanceRow): SalaryAdvanceRecord => {
     deductionHistory,
     totalDeducted,
     balanceAdvance,
+    approvedAt:
+      typeof row.approvedAt === "string"
+        ? row.approvedAt
+        : row.approvedAt
+          ? new Date(row.approvedAt).toISOString()
+          : null,
+    approvedByName: row.approvedBy?.fullName || null,
   };
 };
 
@@ -174,6 +190,9 @@ export async function GET(
         id: BigInt(id),
         organizationId: dbUser.organizationId,
         requiredFor: MODULE_KEY,
+      },
+      include: {
+        approvedBy: { select: { fullName: true } },
       },
     });
     if (!row) {
@@ -255,6 +274,9 @@ export async function PUT(
         organizationId: dbUser.organizationId,
         requiredFor: MODULE_KEY,
       },
+      include: {
+        approvedBy: { select: { fullName: true } },
+      },
     });
     if (!row) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -290,6 +312,9 @@ export async function PUT(
         amount: Number(nextMeta.totalAdvanceRequest || 0),
         description: nextMeta.remarks || "",
         cardSubtitleInfo: JSON.stringify(nextMeta),
+      },
+      include: {
+        approvedBy: { select: { fullName: true } },
       },
     });
 

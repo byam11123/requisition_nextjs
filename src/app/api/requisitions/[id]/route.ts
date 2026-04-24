@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { hydrateDemoModuleGlobals } from '@/lib/stores/demo-module-store';
 
 declare global { interface BigInt { toJSON(): string; } }
 BigInt.prototype.toJSON = function () { return this.toString(); };
+
+hydrateDemoModuleGlobals();
 
 const DEV_IDS = new Set(['9999', '9998', '9997', '9996']);
 

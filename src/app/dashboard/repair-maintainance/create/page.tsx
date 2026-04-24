@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, AlertCircle, Loader2, Upload, X } from "lucide-react";
+import FormSelect, {
+  type FormSelectOption,
+} from "@/components/ui/form-select";
+import { type ContactDefinition } from "@/lib/stores/contact-store";
 
-export default function CreateRepairMaintainancePage() {
+export default function CreateRepairMaintenancePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -23,17 +27,67 @@ export default function CreateRepairMaintainancePage() {
   const [repairBeforePhoto, setRepairBeforePhoto] = useState<File | null>(null);
   const [repairBeforePreview, setRepairBeforePreview] = useState<string | null>(null);
 
+  const [contacts, setContacts] = useState<ContactDefinition[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+
   useEffect(() => {
+    let cancelled = false;
     const u = localStorage.getItem("user");
-    if (!u) return;
+    if (!u) {
+      return () => {
+        cancelled = true;
+      };
+    }
     try {
       const parsed = JSON.parse(u);
       if (parsed?.fullName) {
-        setForm((prev) => ({ ...prev, repairRequisitionByName: parsed.fullName }));
+        const timer = window.setTimeout(() => {
+          if (!cancelled) {
+            setForm((prev) => ({ ...prev, repairRequisitionByName: parsed.fullName }));
+          }
+        }, 0);
+
+        return () => {
+          cancelled = true;
+          window.clearTimeout(timer);
+        };
       }
     } catch {
       // ignore malformed storage value
     }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchContacts = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/contacts", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Failed to load contacts");
+        const data = await res.json();
+        if (!cancelled) {
+          setContacts(data);
+          setLoadingContacts(false);
+          if (data.length > 0) {
+            setForm(prev => ({ ...prev, repairVendorName: data[0].name }));
+          }
+        }
+      } catch (err) {
+        console.error("Contact fetch error:", err);
+        if (!cancelled) setLoadingContacts(false);
+      }
+    };
+    fetchContacts();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const set =
@@ -88,8 +142,8 @@ export default function CreateRepairMaintainancePage() {
 
       if (repairBeforePhoto) await uploadFile(repairBeforePhoto, reqId, "MATERIAL");
       router.push(`/dashboard/repair-maintainance/${reqId}`);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -98,6 +152,28 @@ export default function CreateRepairMaintainancePage() {
   const inputCls =
     "w-full bg-slate-950/50 border border-white/5 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500/50 text-sm placeholder:text-slate-600 transition-colors";
   const labelCls = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2";
+  const priorityOptions: FormSelectOption<string>[] = [
+    { value: "LOW", label: "Low" },
+    { value: "NORMAL", label: "Normal" },
+    { value: "HIGH", label: "High" },
+    { value: "URGENT", label: "Urgent" },
+  ];
+  const warrantyOptions: FormSelectOption<string>[] = [
+    { value: "IN_WARRANTY", label: "In Warranty (No Payment Required)" },
+    { value: "OUT_OF_WARRANTY", label: "Out of Warranty (Payment Required)" },
+  ];
+  const repairStatusOptions: FormSelectOption<string>[] = [
+    { value: "NOT_REPAIRED", label: "Not Repaired" },
+    { value: "REPAIRED", label: "Repaired" },
+  ];
+
+  const vendorOptions: FormSelectOption<string>[] = contacts.map(c => ({
+    value: c.name,
+    label: c.department ? `${c.name} (${c.department})` : c.name,
+  }));
+  if (vendorOptions.length === 0 && !loadingContacts) {
+    vendorOptions.push({ value: "", label: "No contacts found - Go to Contact Manager" });
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
@@ -105,11 +181,11 @@ export default function CreateRepairMaintainancePage() {
         href="/dashboard/repair-maintainance"
         className="inline-flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
       >
-        <ArrowLeft size={16} /> Back to Repair/Maintainance
+              <ArrowLeft size={16} /> Back to Repair & Maintenance
       </Link>
 
-      <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-8">
-        <h1 className="text-2xl font-bold text-slate-100 mb-1">New Repair/Maintainance Request</h1>
+      <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-5 sm:p-6 lg:p-8">
+            <h1 className="text-2xl font-bold text-slate-100 mb-1">New Repair & Maintenance Request</h1>
         <p className="text-slate-400 text-sm mb-6">Submit initial request only. Repair return, payment, and dispatch updates happen from request detail page.</p>
 
         {error && (
@@ -130,12 +206,11 @@ export default function CreateRepairMaintainancePage() {
             </div>
             <div>
               <label className={labelCls}>Priority</label>
-              <select value={form.priority} onChange={set("priority")} className={inputCls}>
-                <option value="LOW">Low</option>
-                <option value="NORMAL">Normal</option>
-                <option value="HIGH">High</option>
-                <option value="URGENT">Urgent</option>
-              </select>
+              <FormSelect
+                value={form.priority}
+                options={priorityOptions}
+                onChange={(value) => setForm((current) => ({ ...current, priority: value }))}
+              />
             </div>
           </div>
 
@@ -151,10 +226,11 @@ export default function CreateRepairMaintainancePage() {
             </div>
             <div>
               <label className={labelCls}>Warranty Status</label>
-              <select value={form.warrantyStatus} onChange={set("warrantyStatus")} className={inputCls}>
-                <option value="IN_WARRANTY">In Warranty (No Payment Required)</option>
-                <option value="OUT_OF_WARRANTY">Out of Warranty (Payment Required)</option>
-              </select>
+              <FormSelect
+                value={form.warrantyStatus}
+                options={warrantyOptions}
+                onChange={(value) => setForm((current) => ({ ...current, warrantyStatus: value }))}
+              />
             </div>
           </div>
 
@@ -173,7 +249,17 @@ export default function CreateRepairMaintainancePage() {
             </div>
             <div>
               <label className={labelCls}>Name of Repair Vendor *</label>
-              <input value={form.repairVendorName} onChange={set("repairVendorName")} className={inputCls} required />
+              {loadingContacts ? (
+                <div className="flex h-[46px] items-center px-4 rounded-xl border border-white/5 bg-slate-900/50 text-slate-400 text-sm">
+                  <Loader2 size={16} className="animate-spin mr-2" /> Loading vendors...
+                </div>
+              ) : (
+                <FormSelect
+                  value={form.repairVendorName}
+                  options={vendorOptions}
+                  onChange={(value) => setForm((current) => ({ ...current, repairVendorName: value }))}
+                />
+              )}
             </div>
           </div>
 
@@ -223,10 +309,11 @@ export default function CreateRepairMaintainancePage() {
               </div>
               <div>
                 <label className={labelCls}>Repair Status</label>
-                <select value={form.repairStatus} onChange={set("repairStatus")} className={inputCls}>
-                  <option value="NOT_REPAIRED">Not Repaired</option>
-                  <option value="REPAIRED">Repaired</option>
-                </select>
+                <FormSelect
+                  value={form.repairStatus}
+                  options={repairStatusOptions}
+                  onChange={(value) => setForm((current) => ({ ...current, repairStatus: value }))}
+                />
               </div>
             </div>
           </div>

@@ -5,8 +5,11 @@ import Link from "next/link";
 import {
   ArrowRight,
   BellRing,
+  Boxes,
   CalendarCheck2,
   Clock3,
+  DatabaseZap,
+  Fuel,
   GripVertical,
   HandCoins,
   LayoutDashboard,
@@ -16,12 +19,16 @@ import {
   Wrench,
 } from "lucide-react";
 
-import { canAccessDashboardPath } from "@/lib/page-access";
+import ActionToast from "@/app/dashboard/action-toast";
+import PageHeader from "@/app/dashboard/components/page-header";
+import StatCard from "@/components/ui/stat-card";
+import { canAccessDashboardPath } from "@/lib/config/page-access";
 
 type StoredUser = {
   role?: string;
   fullName?: string;
   pageAccess?: string[] | null;
+  rolePageAccess?: string[] | null;
 };
 
 type SummaryCardData = {
@@ -32,10 +39,10 @@ type SummaryCardData = {
 };
 
 type ModuleStat = {
-  key: "requisitions" | "repair" | "attendance" | "salaryAdvance";
+  key: "requisitions" | "repair" | "attendance" | "salaryAdvance" | "vehicleFuel" | "store";
   label: string;
   href: string;
-  tone: "indigo" | "emerald" | "amber" | "purple";
+  tone: "indigo" | "emerald" | "amber" | "purple" | "sky" | "rose";
   total: number;
   pending: number;
   completed: number;
@@ -48,6 +55,8 @@ type TrendPoint = {
   repair: number;
   attendance: number;
   salaryAdvance: number;
+  vehicleFuel: number;
+  store: number;
 };
 
 type SiteBreakdown = {
@@ -266,12 +275,19 @@ const moduleColors: Record<string, string> = {
   repair: "bg-emerald-400",
   attendance: "bg-amber-400",
   salaryAdvance: "bg-purple-400",
+  vehicleFuel: "bg-sky-400",
+  store: "bg-rose-400",
 };
 
 export default function OverviewDashboardPage() {
   const [user] = useState<StoredUser | null>(() => getStoredUser());
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    tone: "success" | "error";
+  } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [boardLayout, setBoardLayout] =
     useState<BoardLayout>(DEFAULT_BOARD_LAYOUT);
@@ -338,12 +354,73 @@ export default function OverviewDashboardPage() {
     };
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const loadSummary = async (query: string) => {
+    const token = window.localStorage.getItem("token");
+    const url = query.trim()
+      ? `/api/dashboard-summary?q=${encodeURIComponent(query.trim())}`
+      : "/api/dashboard-summary";
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to load dashboard summary");
+    }
+
+    const payload = (await response.json()) as DashboardSummaryResponse;
+    setSummary(payload);
+  };
+
+  const handleSeedDemoData = async () => {
+    setSeeding(true);
+    try {
+      const token = window.localStorage.getItem("token");
+      const response = await fetch("/api/demo/seed", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error((await response.json()).error || "Failed to seed demo data");
+      }
+
+      await loadSummary(searchQuery);
+      setToast({ message: "Demo data seeded successfully.", tone: "success" });
+    } catch (error: unknown) {
+      setToast({
+        message: error instanceof Error ? error.message : "Failed to seed demo data.",
+        tone: "error",
+      });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const quickLinks = useMemo(() => {
     if (!user?.role) {
       return [];
     }
 
     const entries = [
+      {
+        label: "New Store Item",
+        href: "/dashboard/store/items/create",
+        description: "Create a new image-based inventory item with QR identity.",
+        icon: Boxes,
+      },
       {
         label: "New Requisition",
         href: "/dashboard/create",
@@ -355,6 +432,12 @@ export default function OverviewDashboardPage() {
         href: "/dashboard/repair-maintainance/create",
         description: "Log a new breakdown or repair job.",
         icon: Wrench,
+      },
+      {
+        label: "New Vehicle Fuel",
+        href: "/dashboard/vehicle-fuel/create",
+        description: "Raise a petrol or diesel fuel request for a vehicle.",
+        icon: Fuel,
       },
       {
         label: "New Attendance",
@@ -377,7 +460,7 @@ export default function OverviewDashboardPage() {
     ];
 
     return entries.filter((entry) =>
-      canAccessDashboardPath(entry.href, user.role, user.pageAccess),
+      canAccessDashboardPath(entry.href, user.role, user.pageAccess, user.rolePageAccess),
     );
   }, [user]);
 
@@ -386,7 +469,7 @@ export default function OverviewDashboardPage() {
         {
           label: "Total Records",
           value: summary.summaryCards.totalRecords,
-          helper: "Across requisition, repair, attendance, and salary modules",
+          helper: "Across requisition, repair, vehicle fuel, and store modules",
           tone: "indigo",
           icon: LayoutDashboard,
         },
@@ -425,6 +508,8 @@ export default function OverviewDashboardPage() {
         point.repair,
         point.attendance,
         point.salaryAdvance,
+        point.vehicleFuel,
+        point.store,
       ]),
     );
 
@@ -468,17 +553,17 @@ export default function OverviewDashboardPage() {
     switch (cardId) {
       case "trends":
         return (
-          <div className="min-h-[320px] rounded-3xl border border-white/5 bg-slate-900/50 p-5">
+          <div className="min-h-[320px] rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-slate-100">
+                <h2 className="text-lg font-semibold text-[var(--app-text)]">
                   7-Day Activity
                 </h2>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-[var(--app-muted)]">
                   Daily volume across the core modules.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-slate-500">
+              <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-[var(--app-muted)]">
                 <span className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-indigo-400" />
                   Requisition
@@ -495,18 +580,28 @@ export default function OverviewDashboardPage() {
                   <span className="h-2.5 w-2.5 rounded-full bg-purple-400" />
                   Salary
                 </span>
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
+                  Fuel
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                  Inventory
+                </span>
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-7 gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
               {(summary?.trends || []).map((point) => (
                 <div key={point.label} className="space-y-2">
-                  <div className="flex h-32 items-end justify-center gap-1 rounded-2xl border border-white/5 bg-slate-950/40 px-1.5 py-2">
+                    <div className="flex h-24 items-end justify-center gap-1 rounded-2xl border border-[var(--app-border)] bg-[var(--app-panel)] px-1.5 py-2 sm:h-32">
                     {[
                       { key: "requisitions", value: point.requisitions },
                       { key: "repair", value: point.repair },
                       { key: "attendance", value: point.attendance },
                       { key: "salaryAdvance", value: point.salaryAdvance },
+                      { key: "vehicleFuel", value: point.vehicleFuel },
+                      { key: "store", value: point.store },
                     ].map((bar) => (
                       <div
                         key={bar.key}
@@ -522,7 +617,7 @@ export default function OverviewDashboardPage() {
                       />
                     ))}
                   </div>
-                  <p className="text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <p className="text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--app-muted)]">
                     {point.label}
                   </p>
                 </div>
@@ -533,17 +628,17 @@ export default function OverviewDashboardPage() {
 
       case "notifications":
         return (
-          <div className="min-h-[320px] rounded-3xl border border-white/5 bg-slate-900/50 p-5">
+          <div className="min-h-[320px] rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-slate-100">
+                <h2 className="text-lg font-semibold text-[var(--app-text)]">
                   Reminders & Notifications
                 </h2>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-[var(--app-muted)]">
                   Key follow-ups for approvals, deductions, and active work.
                 </p>
               </div>
-              <span className="rounded-full border border-white/5 bg-slate-950/40 px-3 py-1 text-xs text-slate-400">
+              <span className="rounded-full border border-[var(--app-border)] bg-[var(--app-panel)] px-3 py-1 text-xs text-[var(--app-muted)]">
                 {summary?.notifications.length || 0} items
               </span>
             </div>
@@ -553,7 +648,7 @@ export default function OverviewDashboardPage() {
                 <Link
                   key={item.id}
                   href={item.href}
-                  className="block rounded-2xl border border-white/5 bg-slate-950/40 p-3 transition-colors hover:border-white/10 hover:bg-white/[0.03]"
+                  className="block rounded-2xl border border-[var(--app-border)] bg-[var(--app-panel)] p-3 transition-colors hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface-strong)]"
                 >
                   <div className="flex items-start gap-3">
                     <div
@@ -562,10 +657,10 @@ export default function OverviewDashboardPage() {
                       <BellRing size={16} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-100">
+                      <p className="text-sm font-semibold text-[var(--app-text)]">
                         {item.title}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[var(--app-muted)]">
                         {item.description}
                       </p>
                     </div>
@@ -574,7 +669,7 @@ export default function OverviewDashboardPage() {
               ))}
 
               {!loading && summary?.notifications.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/5 bg-slate-950/30 px-4 py-6 text-sm text-slate-500">
+                <div className="rounded-2xl border border-dashed border-[var(--app-border)] bg-[var(--app-panel)] px-4 py-6 text-sm text-[var(--app-muted)]">
                   No urgent reminders right now. The workflow looks calm.
                 </div>
               )}
@@ -584,12 +679,12 @@ export default function OverviewDashboardPage() {
 
       case "recentActivity":
         return (
-          <div className="min-h-[320px] rounded-3xl border border-white/5 bg-slate-900/50 p-5">
+          <div className="min-h-[320px] rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-5">
             <div>
-              <h2 className="text-lg font-semibold text-slate-100">
+              <h2 className="text-lg font-semibold text-[var(--app-text)]">
                 Recent Activity
               </h2>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-[var(--app-muted)]">
                 Latest operational movement across all connected modules.
               </p>
             </div>
@@ -599,7 +694,7 @@ export default function OverviewDashboardPage() {
                 <Link
                   key={activity.id}
                   href={activity.href}
-                  className="block rounded-2xl border border-white/5 bg-slate-950/40 p-3 transition-colors hover:border-white/10 hover:bg-white/[0.03]"
+                  className="block rounded-2xl border border-[var(--app-border)] bg-[var(--app-panel)] p-3 transition-colors hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface-strong)]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
@@ -609,27 +704,27 @@ export default function OverviewDashboardPage() {
                         >
                           {activity.module}
                         </span>
-                        <p className="truncate text-sm font-semibold text-slate-100">
+                        <p className="truncate text-sm font-semibold text-[var(--app-text)]">
                           {activity.title}
                         </p>
                       </div>
-                      <p className="mt-1.5 text-sm text-slate-400">
+                      <p className="mt-1.5 text-sm text-[var(--app-muted)]">
                         {activity.description}
                       </p>
-                      <p className="mt-1.5 text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                      <p className="mt-1.5 text-[11px] uppercase tracking-[0.16em] text-[var(--app-muted)]">
                         {formatDateTime(activity.timestamp)}
                       </p>
                     </div>
                     <ArrowRight
                       size={16}
-                      className="mt-1 shrink-0 text-slate-500"
+                      className="mt-1 shrink-0 text-[var(--app-muted)]"
                     />
                   </div>
                 </Link>
               ))}
 
               {!loading && summary?.recentActivity.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/5 bg-slate-950/30 px-4 py-6 text-sm text-slate-500">
+                <div className="rounded-2xl border border-dashed border-[var(--app-border)] bg-[var(--app-panel)] px-4 py-6 text-sm text-[var(--app-muted)]">
                   Recent activity will show up here after records start moving.
                 </div>
               )}
@@ -639,12 +734,12 @@ export default function OverviewDashboardPage() {
 
       case "modulePulse":
         return (
-          <div className="min-h-[320px] rounded-3xl border border-white/5 bg-slate-900/50 p-5">
+          <div className="min-h-[320px] rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-5">
             <div>
-              <h2 className="text-lg font-semibold text-slate-100">
+              <h2 className="text-lg font-semibold text-[var(--app-text)]">
                 Module Pulse
               </h2>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-[var(--app-muted)]">
                 Snapshot of total load, pending work, and attention areas.
               </p>
             </div>
@@ -663,14 +758,14 @@ export default function OverviewDashboardPage() {
                   <Link
                     key={module.key}
                     href={module.href}
-                    className="block rounded-2xl border border-white/5 bg-slate-950/40 p-3.5 transition-colors hover:border-white/10 hover:bg-white/[0.03]"
+                    className="block rounded-2xl border border-[var(--app-border)] bg-[var(--app-panel)] p-3.5 transition-colors hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface-strong)]"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-100">
+                        <p className="text-sm font-semibold text-[var(--app-text)]">
                           {module.label}
                         </p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">
+                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[var(--app-muted)]">
                           {module.total} total
                         </p>
                       </div>
@@ -688,22 +783,22 @@ export default function OverviewDashboardPage() {
                       />
                     </div>
 
-                    <div className="mt-3 grid grid-cols-3 gap-3 text-xs text-slate-400">
+                    <div className="mt-3 grid grid-cols-1 gap-3 text-xs text-[var(--app-muted)] sm:grid-cols-3">
                       <div>
-                        <p className="text-slate-500">Completed</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-200">
+                        <p className="text-[var(--app-muted)]">Completed</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--app-text)]">
                           {module.completed}
                         </p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Pending</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-200">
+                        <p className="text-[var(--app-muted)]">Pending</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--app-text)]">
                           {module.pending}
                         </p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Attention</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-200">
+                        <p className="text-[var(--app-muted)]">Attention</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--app-text)]">
                           {module.attention}
                         </p>
                       </div>
@@ -717,13 +812,13 @@ export default function OverviewDashboardPage() {
 
       case "quickLinks":
         return (
-          <div className="min-h-[320px] rounded-3xl border border-white/5 bg-slate-900/50 p-5">
+          <div className="min-h-[320px] rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-slate-100">
+                <h2 className="text-lg font-semibold text-[var(--app-text)]">
                   Quick Links
                 </h2>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-[var(--app-muted)]">
                   Jump directly into the most-used actions and modules.
                 </p>
               </div>
@@ -734,23 +829,23 @@ export default function OverviewDashboardPage() {
                 <Link
                   key={link.href + link.label}
                   href={link.href}
-                  className="group rounded-2xl border border-white/5 bg-slate-950/40 p-3 transition-colors hover:border-white/10 hover:bg-white/[0.03]"
+                  className="group rounded-2xl border border-[var(--app-border)] bg-[var(--app-panel)] p-3 transition-colors hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface-strong)]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="inline-flex rounded-xl border border-white/5 bg-white/[0.03] p-1.5 text-slate-300">
+                      <div className="inline-flex rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-1.5 text-[var(--app-text)]">
                         <link.icon size={16} />
                       </div>
-                      <p className="mt-2.5 text-sm font-semibold text-slate-100">
+                      <p className="mt-2.5 text-sm font-semibold text-[var(--app-text)]">
                         {link.label}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[var(--app-muted)]">
                         {link.description}
                       </p>
                     </div>
                     <ArrowRight
                       size={14}
-                      className="mt-1 shrink-0 text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-300"
+                      className="mt-1 shrink-0 text-[var(--app-muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--app-text)]"
                     />
                   </div>
                 </Link>
@@ -786,9 +881,9 @@ export default function OverviewDashboardPage() {
               : ""
           }`}
         >
-          <div className="mb-2 flex items-center justify-between px-1 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+          <div className="mb-2 flex items-center justify-between px-1 text-[11px] uppercase tracking-[0.18em] text-[var(--app-muted)]">
             <span>Draggable Card</span>
-            <GripVertical size={14} className="text-slate-600" />
+            <GripVertical size={14} className="text-[var(--app-muted)]" />
           </div>
           {renderBoardCard(cardId)}
         </div>
@@ -807,7 +902,7 @@ export default function OverviewDashboardPage() {
         className={`rounded-2xl border border-dashed px-4 py-3 text-center text-xs uppercase tracking-[0.18em] transition-colors ${
           dragOverColumn === columnId
             ? "border-indigo-400/40 bg-indigo-500/5 text-indigo-300"
-            : "border-white/10 bg-slate-900/30 text-slate-500"
+            : "border-[var(--app-border-strong)] bg-[var(--app-panel)] text-[var(--app-muted)]"
         }`}
       >
         Drop Here
@@ -817,125 +912,133 @@ export default function OverviewDashboardPage() {
 
   return (
     <div className="space-y-4 animate-fade-in-up">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-        <div className="space-y-2">
+      {toast ? (
+        <ActionToast
+          message={toast.message}
+          tone={toast.tone}
+          onClose={() => setToast(null)}
+        />
+      ) : null}
+
+      <PageHeader
+        title="Project Command Center"
+        subtitle={`${summary?.organizationName || "Organization"} summary with module trends, quick actions, reminders, and global search in one place.`}
+        align="end"
+        eyebrow={
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-300">
             <LayoutDashboard size={14} />
             Overview
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-100">
-              Project Command Center
-            </h1>
-            <p className="mt-1.5 max-w-3xl text-sm text-slate-400">
-              {summary?.organizationName || "Organization"} summary with module
-              trends, quick actions, reminders, and global search in one place.
-            </p>
-          </div>
-        </div>
-
-        <div className="w-full max-w-xl">
-          <div className="relative">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-            />
-            <input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Global search by request ID, employee, site, vehicle, department..."
-              className="w-full rounded-2xl border border-white/5 bg-slate-900/60 py-2.5 pl-11 pr-4 text-sm text-slate-200 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500/40"
-            />
-          </div>
-
-          {searchQuery.trim() && summary && (
-            <div className="mt-3 rounded-2xl border border-white/5 bg-slate-900/95 p-3 shadow-2xl shadow-slate-950/50">
-              <div className="mb-2 flex items-center justify-between px-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                  Search Results
-                </p>
-                <p className="text-xs text-slate-500">
-                  {summary.searchResults.length} matches
-                </p>
+        }
+        actions={
+          <div className="w-full space-y-3 sm:max-w-xl">
+            {user?.role === "ADMIN" ? (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSeedDemoData}
+                  disabled={seeding}
+                  className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-3.5 py-2 text-sm font-medium text-indigo-200 transition-colors hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {seeding ? (
+                    <Clock3 size={15} className="animate-spin" />
+                  ) : (
+                    <DatabaseZap size={15} />
+                  )}
+                  {seeding ? "Seeding Demo Data..." : "Seed Demo Data"}
+                </button>
               </div>
+            ) : null}
 
-              <div className="space-y-2">
-                {summary.searchResults.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-white/5 px-4 py-5 text-sm text-slate-500">
-                    No matching records found yet.
-                  </div>
-                ) : (
-                  summary.searchResults.map((result) => (
-                    <Link
-                      key={result.id}
-                      href={result.href}
-                      className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 transition-colors hover:border-white/10 hover:bg-white/[0.03]"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses[result.tone]}`}
-                          >
-                            {result.module}
-                          </span>
-                          <p className="truncate text-sm font-semibold text-slate-200">
-                            {result.title}
+            <div className="relative">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--app-muted)]"
+              />
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Global search by request ID, employee, site, vehicle, department..."
+                className="w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] py-2.5 pl-11 pr-4 text-sm text-[var(--app-text)] outline-none transition-colors placeholder:text-[var(--app-muted)] focus:border-indigo-500/40"
+              />
+            </div>
+
+            {searchQuery.trim() && summary && (
+              <div className="mt-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-3 shadow-2xl shadow-black/10">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">
+                    Search Results
+                  </p>
+                  <p className="text-xs text-[var(--app-muted)]">
+                    {summary.searchResults.length} matches
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  {summary.searchResults.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-[var(--app-border)] px-4 py-5 text-sm text-[var(--app-muted)]">
+                      No matching records found yet.
+                    </div>
+                  ) : (
+                    summary.searchResults.map((result) => (
+                      <Link
+                        key={result.id}
+                        href={result.href}
+                        className="flex items-center justify-between rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] px-4 py-3 transition-colors hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface-strong)]"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses[result.tone]}`}
+                            >
+                              {result.module}
+                            </span>
+                            <p className="truncate text-sm font-semibold text-[var(--app-text)]">
+                              {result.title}
+                            </p>
+                          </div>
+                          <p className="mt-1 truncate text-sm text-[var(--app-muted)]">
+                            {result.subtitle}
                           </p>
                         </div>
-                        <p className="mt-1 truncate text-sm text-slate-500">
-                          {result.subtitle}
-                        </p>
-                      </div>
-                      <ArrowRight size={16} className="shrink-0 text-slate-500" />
-                    </Link>
-                  ))
-                )}
+                        <ArrowRight size={16} className="shrink-0 text-[var(--app-muted)]" />
+                      </Link>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {statCards.map((card) => (
-          <div
-            key={card.label}
-            className="rounded-2xl border border-white/5 bg-slate-900/50 p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                  {card.label}
-                </p>
-                <p className="mt-2 text-2xl font-bold text-slate-100">
-                  {loading ? "..." : card.value.toLocaleString("en-IN")}
-                </p>
-              </div>
-              <div
-                className={`inline-flex rounded-xl border p-2 ${toneClasses[card.tone]}`}
-              >
-                <card.icon size={16} />
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-slate-400">{card.helper}</p>
+            )}
           </div>
+        }
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((card) => (
+          <StatCard
+            key={card.label}
+            title={card.label}
+            value={loading ? "..." : card.value.toLocaleString("en-IN")}
+            helper={card.helper}
+            icon={card.icon}
+            tone={card.tone as any}
+          />
         ))}
       </div>
 
-      <div className="rounded-3xl border border-white/5 bg-slate-900/40 p-4">
+      <div className="rounded-3xl border border-[var(--app-border)] bg-[var(--app-panel)] p-4">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">
+            <h2 className="text-lg font-semibold text-[var(--app-text)]">
               Desktop Board
             </h2>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-[var(--app-muted)]">
               Drag cards to rearrange the dashboard the way you want.
             </p>
           </div>
           <button
             type="button"
             onClick={resetBoardLayout}
-            className="inline-flex items-center justify-center rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5"
+            className="inline-flex items-center justify-center rounded-xl border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-text)] transition-colors hover:bg-[var(--app-surface-strong)]"
           >
             Reset Layout
           </button>

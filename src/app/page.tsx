@@ -69,21 +69,21 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-xl animate-fade-in-up">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/50 p-8 shadow-2xl backdrop-blur-xl">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
+        <div className="relative overflow-hidden rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-strong)] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-accent)] to-transparent" />
 
           <div className="mb-8 text-center">
-            <h1 className="mb-2 bg-gradient-to-br from-white to-slate-400 bg-clip-text text-3xl font-bold text-transparent">
+            <h1 className="mb-2 text-3xl font-bold text-[var(--app-text)]">
               Requisition Hub
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-[var(--app-muted)]">
               {mode === "login"
                 ? "Sign in to manage your workflows"
                 : "Create your organization and start as admin"}
             </p>
           </div>
 
-          <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-white/5 bg-slate-950/40 p-1">
+          <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-[var(--app-border)] bg-[var(--app-panel)] p-1">
             <button
               type="button"
               onClick={() => {
@@ -92,8 +92,8 @@ export default function LoginPage() {
               }}
               className={`rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
                 mode === "login"
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                  ? "bg-[var(--app-accent)] text-white"
+                  : "text-[var(--app-muted)] hover:bg-[var(--app-accent-soft)] hover:text-[var(--app-text)]"
               }`}
             >
               Sign In
@@ -106,8 +106,8 @@ export default function LoginPage() {
               }}
               className={`rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
                 mode === "signup"
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                  ? "bg-[var(--app-accent)] text-white"
+                  : "text-[var(--app-muted)] hover:bg-[var(--app-accent-soft)] hover:text-[var(--app-text)]"
               }`}
             >
               Sign Up
@@ -125,18 +125,18 @@ export default function LoginPage() {
             {mode === "signup" && (
               <>
                 <div className="space-y-1">
-                  <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
                     Organization Name
                   </label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 transition-colors group-focus-within:text-indigo-400">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-[var(--app-muted)] transition-colors group-focus-within:text-[var(--app-accent)]">
                       <Building2 size={18} />
                     </div>
                     <input
                       type="text"
                       value={organizationName}
                       onChange={(e) => setOrganizationName(e.target.value)}
-                      className="w-full rounded-xl border border-white/5 bg-slate-950/50 py-3.5 pl-12 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-slate-600 focus:border-indigo-500/50 focus:bg-slate-900/80"
+                      className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] py-3.5 pl-12 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-[var(--app-muted)]/40 focus:border-[var(--app-accent-border)] focus:bg-[var(--app-surface-strong)]"
                       placeholder="Your organization name"
                       required
                     />
@@ -144,18 +144,18 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
                     Admin Name
                   </label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 transition-colors group-focus-within:text-indigo-400">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-[var(--app-muted)] transition-colors group-focus-within:text-[var(--app-accent)]">
                       <User size={18} />
                     </div>
                     <input
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full rounded-xl border border-white/5 bg-slate-950/50 py-3.5 pl-12 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-slate-600 focus:border-indigo-500/50 focus:bg-slate-900/80"
+                      className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] py-3.5 pl-12 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-[var(--app-muted)]/40 focus:border-[var(--app-accent-border)] focus:bg-[var(--app-surface-strong)]"
                       placeholder="Administrator full name"
                       required
                     />
@@ -165,18 +165,18 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-1">
-              <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
                 Email
               </label>
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 transition-colors group-focus-within:text-indigo-400">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-[var(--app-muted)] transition-colors group-focus-within:text-[var(--app-accent)]">
                   <Mail size={18} />
                 </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-white/5 bg-slate-950/50 py-3.5 pl-12 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-slate-600 focus:border-indigo-500/50 focus:bg-slate-900/80"
+                  className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] py-3.5 pl-12 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-[var(--app-muted)]/40 focus:border-[var(--app-accent-border)] focus:bg-[var(--app-surface-strong)]"
                   placeholder="name@example.com"
                   required
                 />
@@ -184,18 +184,18 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
                 Password
               </label>
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 transition-colors group-focus-within:text-indigo-400">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-[var(--app-muted)] transition-colors group-focus-within:text-[var(--app-accent)]">
                   <Lock size={18} />
                 </div>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-white/5 bg-slate-950/50 py-3.5 pl-12 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-slate-600 focus:border-indigo-500/50 focus:bg-slate-900/80"
+                  className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] py-3.5 pl-12 pr-4 text-sm shadow-inner outline-none transition-all placeholder:text-[var(--app-muted)]/40 focus:border-[var(--app-accent-border)] focus:bg-[var(--app-surface-strong)]"
                   placeholder="At least 8 characters"
                   required
                 />
@@ -206,31 +206,31 @@ export default function LoginPage() {
               <>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1">
-                    <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
                       Contact Phone
                     </label>
                     <input
                       type="text"
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
-                      className="w-full rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3.5 text-sm shadow-inner outline-none transition-all placeholder:text-slate-600 focus:border-indigo-500/50 focus:bg-slate-900/80"
+                      className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] px-4 py-3.5 text-sm shadow-inner outline-none transition-all placeholder:text-[var(--app-muted)]/40 focus:border-[var(--app-accent-border)] focus:bg-[var(--app-surface-strong)]"
                       placeholder="Optional"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">
                       Address
                     </label>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className="w-full rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3.5 text-sm shadow-inner outline-none transition-all placeholder:text-slate-600 focus:border-indigo-500/50 focus:bg-slate-900/80"
+                      className="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-panel)] px-4 py-3.5 text-sm shadow-inner outline-none transition-all placeholder:text-[var(--app-muted)]/40 focus:border-[var(--app-accent-border)] focus:bg-[var(--app-surface-strong)]"
                       placeholder="Optional"
                     />
                   </div>
                 </div>
-                <p className="rounded-2xl border border-white/5 bg-slate-950/30 px-4 py-3 text-xs text-slate-500">
+                <p className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-panel)]/30 px-4 py-3 text-xs text-[var(--app-muted)]">
                   The first registered user becomes the organization admin and can manage users, permissions, and page access.
                 </p>
               </>
@@ -239,7 +239,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3.5 font-medium text-white shadow-lg shadow-indigo-600/20 transition-all active:scale-[0.98] hover:bg-indigo-500 disabled:opacity-70 disabled:active:scale-100"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--app-accent)] px-4 py-3.5 font-medium text-white shadow-lg shadow-[var(--app-accent)]/20 transition-all active:scale-[0.98] hover:bg-[var(--app-accent-hover)] disabled:opacity-70 disabled:active:scale-100"
             >
               {loading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />

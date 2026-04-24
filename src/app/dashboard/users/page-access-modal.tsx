@@ -8,13 +8,15 @@ import {
   DashboardPageKey,
   DashboardRole,
   ROLE_DEFAULT_PAGE_ACCESS,
-} from "@/lib/page-access";
+} from "@/lib/config/page-access";
 
 type UserRow = {
   id: string;
   fullName?: string | null;
   email?: string | null;
   role: DashboardRole;
+  customRoleName?: string | null;
+  rolePageAccess?: DashboardPageKey[] | null;
   pageAccess?: DashboardPageKey[] | null;
 };
 
@@ -34,7 +36,7 @@ export default function PageAccessModal({
   onToast,
 }: PageAccessModalProps) {
   const defaultPages = useMemo(
-    () => (user ? ROLE_DEFAULT_PAGE_ACCESS[user.role] : []),
+    () => (user ? user.rolePageAccess ?? ROLE_DEFAULT_PAGE_ACCESS[user.role] : []),
     [user],
   );
 
@@ -123,7 +125,7 @@ export default function PageAccessModal({
                 Role Default
               </p>
               <p className="mt-1 text-sm text-slate-300">
-                {user.role} starts with {defaultPages.length} default page permissions.
+                {(user.customRoleName || user.role)} starts with {defaultPages.length} default page permissions.
               </p>
             </div>
             <button

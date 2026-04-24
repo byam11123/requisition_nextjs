@@ -2,8 +2,11 @@ import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 
 import { generateToken } from "@/lib/auth";
-import { createDevSignupAccount, findDevUserByEmail } from "@/lib/dev-auth-store";
+import { createDevSignupAccount, findDevUserByEmail } from "@/lib/stores/dev-auth-store";
+import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
 
 function buildOrganizationPrefix(name: string) {
   const prefix = name
@@ -64,6 +67,25 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // ── Supabase Auth Signup ───────────────────────────────────────────
+      const cookieStore = await cookies();
+      const supabase = createClient(cookieStore);
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: password,
+        options: {
+          data: {
+            full_name: normalizedFullName,
+          },
+        },
+      });
+
+      if (authError) {
+        console.error("Supabase Auth signup error:", authError);
+        return NextResponse.json({ error: authError.message }, { status: 400 });
+      }
+
       const passwordHash = await bcrypt.hash(password, 10);
 
       const createdOrganization = await prisma.organization.create({
@@ -78,6 +100,7 @@ export async function POST(req: NextRequest) {
               email: normalizedEmail,
               fullName: normalizedFullName,
               passwordHash,
+              supabaseUid: authData.user?.id,
               role: "ADMIN",
               designation: "Administrator",
               department: "Administration",
@@ -93,6 +116,11 @@ export async function POST(req: NextRequest) {
 
       const adminUser = createdOrganization.users[0];
       const token = generateToken(adminUser.id.toString(), adminUser.role);
+      const roleContext = await getEffectiveRoleContext({
+        userId: adminUser.id.toString(),
+        baseRole: adminUser.role,
+        organizationId: createdOrganization.id,
+      });
 
       return NextResponse.json({
         token,
@@ -105,6 +133,10 @@ export async function POST(req: NextRequest) {
           department: adminUser.department,
           designation: adminUser.designation,
           pageAccess: null,
+          baseRole: adminUser.role,
+          customRoleKey: roleContext?.roleKey || adminUser.role,
+          customRoleName: roleContext?.roleName || adminUser.role,
+          rolePageAccess: roleContext?.rolePageAccess || null,
         },
       });
     } catch (dbError) {
@@ -127,6 +159,11 @@ export async function POST(req: NextRequest) {
       });
 
       const token = generateToken(created.user.id, created.user.role);
+      const roleContext = await getEffectiveRoleContext({
+        userId: created.user.id,
+        baseRole: created.user.role,
+        organizationId: created.organization.id,
+      });
 
       return NextResponse.json({
         token,
@@ -139,6 +176,10 @@ export async function POST(req: NextRequest) {
           department: created.user.department,
           designation: created.user.designation,
           pageAccess: null,
+          baseRole: created.user.role,
+          customRoleKey: roleContext?.roleKey || created.user.role,
+          customRoleName: roleContext?.roleName || created.user.role,
+          rolePageAccess: roleContext?.rolePageAccess || null,
         },
       });
     }
@@ -150,3 +191,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

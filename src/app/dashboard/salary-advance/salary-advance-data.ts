@@ -27,6 +27,8 @@ export type SalaryAdvanceRecord = {
   deductionHistory: SalaryAdvanceDeduction[];
   totalDeducted: number;
   balanceAdvance: number;
+  approvedAt?: string | null;
+  approvedByName?: string | null;
 };
 
 export function formatSalaryAdvanceDate(value: string) {
@@ -57,4 +59,14 @@ export function getSalaryAdvanceStatusClasses(status: SalaryAdvanceStatus) {
     return "bg-rose-500/10 text-rose-400 border-rose-500/20";
   }
   return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+}
+
+export function getSalaryAdvanceStatusTone(status: SalaryAdvanceStatus) {
+  if (status === "APPROVED") {
+    return "emerald" as const;
+  }
+  if (status === "REJECTED") {
+    return "rose" as const;
+  }
+  return "amber" as const;
 }
