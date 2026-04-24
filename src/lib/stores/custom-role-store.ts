@@ -180,20 +180,17 @@ export async function getCustomRolesForOrganization(organizationId: bigint | str
   }
 
   try {
-    const latestEntry = await prisma.syncLog.findFirst({
-      where: {
-        entityType: CUSTOM_ROLE_ENTITY_TYPE,
-        entityId: organizationId,
-      },
-      orderBy: { createdAt: "desc" },
+    const dbConfig = await prisma.customRoleConfig.findUnique({
+      where: { organizationId },
     });
 
-    const dbRoles = latestEntry?.payload
-      ? normalizeCustomRoleDefinitions(JSON.parse(latestEntry.payload))
+    const dbRoles = dbConfig?.payload
+      ? normalizeCustomRoleDefinitions(JSON.parse(dbConfig.payload))
       : null;
 
     return mergeWithSystemDefaults(dbRoles || fileRoles || []);
-  } catch {
+  } catch (error) {
+    console.error("Error fetching custom roles from DB:", error);
     return mergeWithSystemDefaults(fileRoles || []);
   }
 }
@@ -214,9 +211,18 @@ export async function saveCustomRolesForOrganization(
 
   if (typeof organizationId === "bigint") {
     try {
-      // Database sync logs for custom roles require additional user context.
-      // Skipping for now to prioritize local file store persistence.
-    } catch {
+      await prisma.customRoleConfig.upsert({
+        where: { organizationId },
+        update: {
+          payload: JSON.stringify(normalized),
+        },
+        create: {
+          organizationId,
+          payload: JSON.stringify(normalized),
+        },
+      });
+    } catch (error) {
+      console.error("Error saving custom roles to DB:", error);
       // File fallback already covers offline mode.
     }
   }

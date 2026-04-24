@@ -5,6 +5,8 @@ import { generateToken } from "@/lib/auth";
 import { createDevSignupAccount, findDevUserByEmail } from "@/lib/stores/dev-auth-store";
 import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
 
 function buildOrganizationPrefix(name: string) {
   const prefix = name
@@ -65,6 +67,25 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // ── Supabase Auth Signup ───────────────────────────────────────────
+      const cookieStore = await cookies();
+      const supabase = createClient(cookieStore);
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: password,
+        options: {
+          data: {
+            full_name: normalizedFullName,
+          },
+        },
+      });
+
+      if (authError) {
+        console.error("Supabase Auth signup error:", authError);
+        return NextResponse.json({ error: authError.message }, { status: 400 });
+      }
+
       const passwordHash = await bcrypt.hash(password, 10);
 
       const createdOrganization = await prisma.organization.create({
@@ -79,6 +100,7 @@ export async function POST(req: NextRequest) {
               email: normalizedEmail,
               fullName: normalizedFullName,
               passwordHash,
+              supabaseUid: authData.user?.id,
               role: "ADMIN",
               designation: "Administrator",
               department: "Administration",

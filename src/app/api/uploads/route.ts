@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
 import { hydrateDemoModuleGlobals } from '@/lib/stores/demo-module-store';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
 import { prisma } from '@/lib/prisma';
+import { createClient } from '@/utils/supabase/server';
+import { cookies } from 'next/headers';
 
 hydrateDemoModuleGlobals();
 
@@ -31,7 +30,6 @@ type UploadGlobals = typeof globalThis & {
   }>;
 };
 
-// Maps category -> field name on the requisition record
 const CATEGORY_FIELD: Record<string, string> = {
   BILL:            'billPhotoUrl',
   MATERIAL:        'materialPhotoUrl',
@@ -41,7 +39,6 @@ const CATEGORY_FIELD: Record<string, string> = {
   SALARY_ADVANCE_SLIP: 'materialPhotoUrl',
 };
 
-// Maps category -> field name on repair-maintainance dev records
 const REPAIR_CATEGORY_FIELD: Record<string, string> = {
   BILL:            'billInvoicePhoto',
   MATERIAL:        'repairStatusBeforePhoto',
@@ -65,20 +62,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'file and requisitionId are required' }, { status: 400 });
     }
 
-    // ── Save file to public/uploads/ ────────────────────────────────────────
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    // ── Supabase Storage Upload ───────────────────────────────────────────
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
 
     const ext      = file.name.split('.').pop() || 'bin';
     const filename = `${Date.now()}_${reqId}_${category.toLowerCase()}.${ext}`;
-    const filepath = path.join(uploadDir, filename);
+    const storagePath = `uploads/${filename}`;
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filepath, buffer);
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('requisition-attachments')
+      .upload(storagePath, file, {
+        contentType: file.type,
+        upsert: true,
+      });
 
-    const publicUrl = `/uploads/${filename}`;
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError);
+      return NextResponse.json({ error: 'Upload to storage failed' }, { status: 500 });
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('requisition-attachments')
+      .getPublicUrl(storagePath);
+
+    const publicUrl = publicUrlData.publicUrl;
 
     // ── Update requisition dev store if applicable ────────────────────────
     const g = globalThis as UploadGlobals;
@@ -119,7 +127,6 @@ export async function POST(req: NextRequest) {
       const repairStore = g.__devRepairStore;
       const repairIdx = repairStore.findIndex(r => String(r.id) === String(reqId));
       if (repairIdx !== -1) {
-        // Keep both repair-specific and shared requisition-style keys in sync.
         repairStore[repairIdx] = {
           ...repairStore[repairIdx],
           [repairField]: publicUrl,
@@ -128,7 +135,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Update repair metadata in DB for custom repair-only categories ────
+    // ── Update database metadata ──────────────────────────────────────────
     if (category === 'REPAIR_AFTER' || category === 'DISPATCH_ITEM') {
       try {
         const requisition = await prisma.requisition.findUnique({ where: { id: BigInt(reqId) } });
@@ -144,8 +151,8 @@ export async function POST(req: NextRequest) {
             data: { cardSubtitleInfo: JSON.stringify(meta) },
           });
         }
-      } catch {
-        // Keep upload successful even if metadata update fails.
+      } catch (dbError) {
+        console.error('DB Metadata update error:', dbError);
       }
     }
 
@@ -155,15 +162,15 @@ export async function POST(req: NextRequest) {
           where: { id: BigInt(reqId) },
           data: { [field]: publicUrl },
         });
-      } catch {
-        // Keep upload successful even if database field update fails.
+      } catch (dbError) {
+        console.error('DB field update error:', dbError);
       }
     }
 
     return NextResponse.json({ url: publicUrl });
   } catch (err: unknown) {
-    console.error('Upload error:', err);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    console.error('Upload handler error:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 

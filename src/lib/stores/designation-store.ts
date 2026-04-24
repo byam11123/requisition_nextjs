@@ -133,20 +133,17 @@ export async function getDesignationsForOrganization(organizationId: bigint | st
   }
 
   try {
-    const latestEntry = await prisma.syncLog.findFirst({
-      where: {
-        entityType: DESIGNATION_ENTITY_TYPE,
-        entityId: organizationId,
-      },
-      orderBy: { createdAt: "desc" },
+    const dbConfig = await prisma.designationConfig.findUnique({
+      where: { organizationId },
     });
 
-    const dbDesignations = latestEntry?.payload
-      ? normalizeDesignationDefinitions(JSON.parse(latestEntry.payload))
+    const dbDesignations = dbConfig?.payload
+      ? normalizeDesignationDefinitions(JSON.parse(dbConfig.payload))
       : null;
 
     return dbDesignations || fileDesignations || [];
-  } catch {
+  } catch (error) {
+    console.error("Error fetching designations from DB:", error);
     return fileDesignations || [];
   }
 }
@@ -167,8 +164,18 @@ export async function saveDesignationsForOrganization(
 
   if (typeof organizationId === "bigint") {
     try {
-      // Skipping SyncLog creation as it requires a user context.
-    } catch {
+      await prisma.designationConfig.upsert({
+        where: { organizationId },
+        update: {
+          payload: JSON.stringify(normalized),
+        },
+        create: {
+          organizationId,
+          payload: JSON.stringify(normalized),
+        },
+      });
+    } catch (error) {
+      console.error("Error saving designations to DB:", error);
       // File fallback already covers offline mode.
     }
   }

@@ -10,6 +10,8 @@ import {
 import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
 import { getUserPageAccess } from "@/lib/stores/user-page-access-store";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
 
 const DEV_USERS: Record<string, { id: string; fullName: string; role: string }> = {
   "admin@example.com": { id: "9999", fullName: "Test Admin", role: "ADMIN" },
@@ -107,13 +109,30 @@ export async function POST(req: NextRequest) {
         include: { organization: true },
       });
 
-      if (!user || !user.passwordHash) {
+      if (!user) {
         return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
       }
 
-      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-      if (!isValidPassword) {
-        return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      // ── Supabase Auth Login ────────────────────────────────────────────
+      const cookieStore = await cookies();
+      const supabase = createClient(cookieStore);
+
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: password,
+      });
+
+      if (authError) {
+        console.error("Supabase Auth login error:", authError);
+        // Fallback to manual bcrypt check if user exists in DB but not in Supabase Auth yet
+        if (user.passwordHash) {
+          const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+          if (!isValidPassword) {
+            return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+          }
+        } else {
+          return NextResponse.json({ error: authError.message }, { status: 401 });
+        }
       }
 
       if (!user.isActive || !user.organization.isActive) {
@@ -127,7 +146,10 @@ export async function POST(req: NextRequest) {
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { lastLogin: new Date() },
+        data: { 
+          lastLogin: new Date(),
+          ...(user.supabaseUid ? {} : (authData.user ? { supabaseUid: authData.user.id } : {}))
+        },
       });
 
       const pageAccess = await getUserPageAccess(user.id);

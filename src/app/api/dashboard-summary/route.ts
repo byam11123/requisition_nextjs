@@ -736,7 +736,7 @@ export async function GET(req: NextRequest) {
       const attendance = globalStore.__devAttendanceStore || [];
       const salaryAdvances = globalStore.__devSalaryAdvanceStore || [];
       const vehicleFuel = globalStore.__devReqStore?.filter(r => r.requiredFor === VEHICLE_FUEL_MODULE_KEY) || [];
-      const storeItems = listStoreItems("demo-org-id");
+      const storeItems = await listStoreItems("demo-org-id");
       
       const users: SummaryUser[] = [
         {
@@ -852,7 +852,7 @@ export async function GET(req: NextRequest) {
       const vehicleFuel = mappedRows.filter(
         (row) => row.requiredFor === VEHICLE_FUEL_MODULE_KEY,
       );
-      const storeItems = listStoreItems(String(dbUser.organizationId));
+      const storeItems = await listStoreItems(String(dbUser.organizationId));
       const users: SummaryUser[] = userRows.map((entry) => ({
         id: entry.id,
         fullName: entry.fullName,

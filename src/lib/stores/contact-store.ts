@@ -87,17 +87,17 @@ export async function getContactsForOrganization(organizationId: bigint | string
   if (typeof organizationId === "string") return fileContacts || [];
 
   try {
-    const latestEntry = await prisma.syncLog.findFirst({
-      where: { entityType: CONTACT_ENTITY_TYPE, entityId: organizationId },
-      orderBy: { createdAt: "desc" },
+    const dbConfig = await prisma.contactConfig.findUnique({
+      where: { organizationId },
     });
 
-    const dbContacts = latestEntry?.payload
-      ? normalizeContactDefinitions(JSON.parse(latestEntry.payload))
+    const dbContacts = dbConfig?.payload
+      ? normalizeContactDefinitions(JSON.parse(dbConfig.payload))
       : null;
 
     return dbContacts || fileContacts || [];
-  } catch {
+  } catch (error) {
+    console.error("Error fetching contacts from DB:", error);
     return fileContacts || [];
   }
 }
@@ -116,9 +116,18 @@ export async function saveContactsForOrganization(
 
   if (typeof organizationId === "bigint") {
     try {
-      // Sync log requires a user context which is not available here.
-      // Skipping database sync log for shared contact store in demo mode.
-    } catch {
+      await prisma.contactConfig.upsert({
+        where: { organizationId },
+        update: {
+          payload: JSON.stringify(normalized),
+        },
+        create: {
+          organizationId,
+          payload: JSON.stringify(normalized),
+        },
+      });
+    } catch (error) {
+      console.error("Error saving contacts to DB:", error);
       // File fallback already covers offline mode.
     }
   }

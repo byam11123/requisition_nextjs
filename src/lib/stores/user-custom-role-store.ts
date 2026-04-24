@@ -46,21 +46,14 @@ export async function getUserCustomRoleKey(userId: bigint | string) {
   }
 
   try {
-    const latestEntry = await prisma.syncLog.findFirst({
-      where: {
-        entityType: USER_CUSTOM_ROLE_ENTITY_TYPE,
-        entityId: userId,
-      },
-      orderBy: { createdAt: "desc" },
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { customRoleKey: true },
     });
 
-    if (!latestEntry?.payload) {
-      return fileValue;
-    }
-
-    const parsed = JSON.parse(latestEntry.payload) as { roleKey?: unknown };
-    return typeof parsed.roleKey === "string" ? parsed.roleKey : fileValue;
-  } catch {
+    return user?.customRoleKey || fileValue;
+  } catch (error) {
+    console.error("Error fetching user custom role from DB:", error);
     return fileValue;
   }
 }
@@ -80,24 +73,19 @@ export async function getUserCustomRoleMap(userIds: Array<bigint | string>) {
   }
 
   try {
-    const entries = await prisma.syncLog.findMany({
-      where: {
-        entityType: USER_CUSTOM_ROLE_ENTITY_TYPE,
-        entityId: { in: bigintIds },
-      },
-      orderBy: { createdAt: "desc" },
+    const users = await prisma.user.findMany({
+      where: { id: { in: bigintIds } },
+      select: { id: true, customRoleKey: true },
     });
 
-    for (const entry of entries) {
-      const key = entry.entityId?.toString();
-      if (!key || map.get(key)) {
-        continue;
+    for (const user of users) {
+      const key = user.id.toString();
+      if (user.customRoleKey) {
+        map.set(key, user.customRoleKey);
       }
-
-      const parsed = entry.payload ? (JSON.parse(entry.payload) as { roleKey?: unknown }) : null;
-      map.set(key, typeof parsed?.roleKey === "string" ? parsed.roleKey : null);
     }
-  } catch {
+  } catch (error) {
+    console.error("Error fetching user custom role map from DB:", error);
     return map;
   }
 
@@ -118,8 +106,12 @@ export async function saveUserCustomRoleKey(
 
   if (typeof userId === "bigint") {
     try {
-      // Skipping database sync log for assignment in demo mode.
-    } catch {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { customRoleKey: roleKey },
+      });
+    } catch (error) {
+      console.error("Error saving user custom role to DB:", error);
       // File fallback already saved the assignment.
     }
   }

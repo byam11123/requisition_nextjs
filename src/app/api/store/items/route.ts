@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(listStoreItems(scope.organizationId));
+    return NextResponse.json(await listStoreItems(scope.organizationId));
   } catch (error) {
     console.error("Store items GET error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const locations = listStoreLocations(scope.organizationId);
+    const locations = await listStoreLocations(scope.organizationId);
     if (
       body.initialLocationKey &&
       !locations.some((location) => location.key === body.initialLocationKey)
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const created = createStoreItem(scope.organizationId, {
+    const created = await createStoreItem(scope.organizationId, {
       name: body.name || "",
       category: body.category || "",
       subcategory: body.subcategory || "",

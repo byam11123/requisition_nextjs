@@ -74,17 +74,14 @@ export async function getRequisitionWorkflowConfig(
   }
 
   try {
-    const latestEntry = await prisma.syncLog.findFirst({
-      where: {
-        entityType: WORKFLOW_ENTITY_TYPE,
-        entityId: organizationId,
-      },
-      orderBy: { createdAt: "desc" },
+    const dbConfig = await prisma.workflowConfig.findUnique({
+      where: { organizationId },
     });
 
-    const dbValue = normalizeRequisitionWorkflowConfig(latestEntry?.payload ? JSON.parse(latestEntry.payload) : null);
+    const dbValue = normalizeRequisitionWorkflowConfig(dbConfig?.payload ? JSON.parse(dbConfig.payload) : null);
     return dbValue || fileValue || DEFAULT_REQUISITION_WORKFLOW_CONFIG;
-  } catch {
+  } catch (error) {
+    console.error("Error fetching workflow config from DB:", error);
     return fileValue || DEFAULT_REQUISITION_WORKFLOW_CONFIG;
   }
 }
@@ -105,9 +102,19 @@ export async function saveRequisitionWorkflowConfig(
 
   if (typeof organizationId === "bigint") {
     try {
-      // Skipping SyncLog creation as it requires a user context.
-    } catch {
-      // File fallback already captured the config for offline use.
+      await prisma.workflowConfig.upsert({
+        where: { organizationId },
+        update: {
+          payload: JSON.stringify(normalized),
+        },
+        create: {
+          organizationId,
+          payload: JSON.stringify(normalized),
+        },
+      });
+    } catch (error) {
+      console.error("Error saving workflow config to DB:", error);
+      // File fallback already captured the config
     }
   }
 

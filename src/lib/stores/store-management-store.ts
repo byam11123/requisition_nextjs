@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { prisma } from "@/lib/prisma";
 
 export type StoreItemType = "ASSET" | "STOCK";
 export type StoreLocationType = "OFFICE" | "SITE" | "WAREHOUSE" | "YARD" | "OTHER";
@@ -48,74 +49,14 @@ type StoreOrganizationState = {
   locationCounter: number;
 };
 
-type PersistedStoreState = {
-  organizations: Record<string, StoreOrganizationState>;
-};
-
 const STORE_PATH = path.join(process.cwd(), ".local", "store-management-store.json");
 
-const g = globalThis as typeof globalThis & {
-  __storeManagementState?: PersistedStoreState;
-  __storeManagementLoaded?: boolean;
-};
-
-function buildDefaultState(): PersistedStoreState {
-  return { organizations: {} };
-}
-
-function loadState() {
-  if (g.__storeManagementLoaded) {
-    return;
-  }
-
-  g.__storeManagementLoaded = true;
-
-  try {
-    if (!fs.existsSync(STORE_PATH)) {
-      g.__storeManagementState = buildDefaultState();
-      return;
-    }
-
-    const raw = fs.readFileSync(STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as Partial<PersistedStoreState>;
-    g.__storeManagementState = {
-      organizations:
-        parsed.organizations && typeof parsed.organizations === "object"
-          ? parsed.organizations
-          : {},
-    };
-  } catch {
-    g.__storeManagementState = buildDefaultState();
-  }
-}
-
-function persistState() {
-  fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
-  fs.writeFileSync(
-    STORE_PATH,
-    JSON.stringify(g.__storeManagementState || buildDefaultState(), null, 2),
-    "utf8",
-  );
-}
-
-function getState() {
-  loadState();
-  if (!g.__storeManagementState) {
-    g.__storeManagementState = buildDefaultState();
-  }
-  return g.__storeManagementState;
-}
-
-function normalizeStoreItem(item: StoreItem): StoreItem {
+function buildDefaultState(): StoreOrganizationState {
   return {
-    ...item,
-    stockByLocation: Array.isArray(item.stockByLocation)
-      ? item.stockByLocation.map((entry) => ({
-          locationKey: String(entry.locationKey || ""),
-          quantity: Number(entry.quantity || 0),
-          minimumStock: Number(entry.minimumStock || 0),
-        }))
-      : [],
+    items: [],
+    locations: [],
+    itemCounter: 0,
+    locationCounter: 0,
   };
 }
 
@@ -229,34 +170,68 @@ function createDemoSeedState(): StoreOrganizationState {
   };
 }
 
-function ensureOrganizationState(organizationId: string) {
-  const state = getState();
-
-  if (!state.organizations[organizationId]) {
-    state.organizations[organizationId] =
-      organizationId === "demo"
-        ? createDemoSeedState()
-        : {
-            items: [],
-            locations: [],
-            itemCounter: 0,
-            locationCounter: 0,
-          };
-    persistState();
+async function getOrganizationState(organizationId: string): Promise<StoreOrganizationState> {
+  if (organizationId === "demo") {
+    return createDemoSeedState();
   }
 
-  return state.organizations[organizationId];
+  try {
+    const dbConfig = await prisma.storeManagementConfig.findUnique({
+      where: { organizationId: BigInt(organizationId) },
+    });
+
+    if (dbConfig?.payload) {
+      return JSON.parse(dbConfig.payload);
+    }
+  } catch (error) {
+    console.error("Error fetching store state from DB:", error);
+  }
+
+  return buildDefaultState();
 }
 
-export function listStoreLocations(organizationId: string) {
-  return [...ensureOrganizationState(organizationId).locations];
+async function saveOrganizationState(organizationId: string, state: StoreOrganizationState) {
+  if (organizationId === "demo") {
+    return;
+  }
+
+  try {
+    await prisma.storeManagementConfig.upsert({
+      where: { organizationId: BigInt(organizationId) },
+      update: { payload: JSON.stringify(state) },
+      create: {
+        organizationId: BigInt(organizationId),
+        payload: JSON.stringify(state),
+      },
+    });
+  } catch (error) {
+    console.error("Error saving store state to DB:", error);
+  }
 }
 
-export function createStoreLocation(
+function normalizeStoreItem(item: StoreItem): StoreItem {
+  return {
+    ...item,
+    stockByLocation: Array.isArray(item.stockByLocation)
+      ? item.stockByLocation.map((entry) => ({
+          locationKey: String(entry.locationKey || ""),
+          quantity: Number(entry.quantity || 0),
+          minimumStock: Number(entry.minimumStock || 0),
+        }))
+      : [],
+  };
+}
+
+export async function listStoreLocations(organizationId: string) {
+  const state = await getOrganizationState(organizationId);
+  return [...state.locations];
+}
+
+export async function createStoreLocation(
   organizationId: string,
   input: Omit<StoreLocation, "id" | "key" | "createdAt">,
 ) {
-  const orgState = ensureOrganizationState(organizationId);
+  const orgState = await getOrganizationState(organizationId);
   orgState.locationCounter += 1;
   const created: StoreLocation = {
     id: `LOC-${orgState.locationCounter}`,
@@ -271,22 +246,22 @@ export function createStoreLocation(
   };
 
   orgState.locations.unshift(created);
-  persistState();
+  await saveOrganizationState(organizationId, orgState);
   return created;
 }
 
-export function listStoreItems(organizationId: string) {
-  return ensureOrganizationState(organizationId).items.map(normalizeStoreItem);
+export async function listStoreItems(organizationId: string) {
+  const state = await getOrganizationState(organizationId);
+  return state.items.map(normalizeStoreItem);
 }
 
-export function getStoreItem(organizationId: string, itemId: string) {
-  const item = ensureOrganizationState(organizationId).items.find(
-    (entry) => entry.id === itemId,
-  );
+export async function getStoreItem(organizationId: string, itemId: string) {
+  const state = await getOrganizationState(organizationId);
+  const item = state.items.find((entry) => entry.id === itemId);
   return item ? normalizeStoreItem(item) : null;
 }
 
-export function createStoreItem(
+export async function createStoreItem(
   organizationId: string,
   input: Omit<StoreItem, "id" | "itemCode" | "qrValue" | "createdAt" | "imageUrl"> & {
     initialLocationKey?: string;
@@ -294,7 +269,7 @@ export function createStoreItem(
     minimumStock?: number;
   },
 ) {
-  const orgState = ensureOrganizationState(organizationId);
+  const orgState = await getOrganizationState(organizationId);
   orgState.itemCounter += 1;
   const id = `ITEM-${orgState.itemCounter}`;
   const itemCode = `${input.itemType === "ASSET" ? "AST" : "STK"}-${String(orgState.itemCounter).padStart(4, "0")}`;
@@ -328,16 +303,16 @@ export function createStoreItem(
   };
 
   orgState.items.unshift(created);
-  persistState();
+  await saveOrganizationState(organizationId, orgState);
   return created;
 }
 
-export function updateStoreItemImage(
+export async function updateStoreItemImage(
   organizationId: string,
   itemId: string,
   imageUrl: string,
 ) {
-  const orgState = ensureOrganizationState(organizationId);
+  const orgState = await getOrganizationState(organizationId);
   const index = orgState.items.findIndex((entry) => entry.id === itemId);
   if (index === -1) {
     return null;
@@ -347,18 +322,18 @@ export function updateStoreItemImage(
     ...orgState.items[index],
     imageUrl,
   };
-  persistState();
+  await saveOrganizationState(organizationId, orgState);
   return normalizeStoreItem(orgState.items[index]);
 }
 
-export function deleteStoreLocation(organizationId: string, locationKey: string) {
-  const orgState = ensureOrganizationState(organizationId);
+export async function deleteStoreLocation(organizationId: string, locationKey: string) {
+  const orgState = await getOrganizationState(organizationId);
   const index = orgState.locations.findIndex((entry) => entry.key === locationKey);
   if (index === -1) {
     return false;
   }
 
   orgState.locations.splice(index, 1);
-  persistState();
+  await saveOrganizationState(organizationId, orgState);
   return true;
 }
