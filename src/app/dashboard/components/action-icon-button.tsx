@@ -65,7 +65,7 @@ export default function ActionIconButton(props: ActionIconButtonProps) {
 
   const classes = `${sizeClasses[size]} inline-flex items-center justify-center transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${toneClasses[tone]} ${className}`.trim();
 
-  if ("href" in props) {
+  if (props.href) {
     return (
       <Link
         id={id}
