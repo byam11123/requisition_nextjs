@@ -257,7 +257,7 @@ const buildRecentActivities = (
   vehicleFuel: SummaryRequisitionRow[],
 ) => {
   const items: RecentActivity[] = [
-    ...requisitions.map((row) => ({
+    ...requisitions.map((row: SummaryRequisitionRow) => ({
       id: `req-${row.id}`,
       module: "Requisition",
       title: row.requestId || "Requisition",
@@ -266,7 +266,7 @@ const buildRecentActivities = (
       href: `/dashboard/req/${row.id}`,
       tone: "indigo" as const,
     })),
-    ...repairs.map((row) => ({
+    ...repairs.map((row: SummaryRequisitionRow) => ({
       id: `repair-${row.id}`,
       module: "Repair",
       title: row.requestId || "Repair Case",
@@ -275,7 +275,7 @@ const buildRecentActivities = (
       href: `/dashboard/repair-maintainance/${row.id}`,
       tone: "emerald" as const,
     })),
-    ...attendance.map((row) => {
+    ...attendance.map((row: SummaryRequisitionRow) => {
       const meta = parseJsonObject<AttendanceMeta>(row.cardSubtitleInfo);
       return {
         id: `attendance-${row.id}`,
@@ -287,7 +287,7 @@ const buildRecentActivities = (
         tone: "amber" as const,
       };
     }),
-    ...salaryAdvances.map((row) => {
+    ...salaryAdvances.map((row: SummaryRequisitionRow) => {
       const meta = parseJsonObject<SalaryAdvanceMeta>(row.cardSubtitleInfo);
       return {
         id: `salary-${row.id}`,
@@ -299,7 +299,7 @@ const buildRecentActivities = (
         tone: "purple" as const,
       };
     }),
-    ...vehicleFuel.map((row) => ({
+    ...vehicleFuel.map((row: SummaryRequisitionRow) => ({
       id: `fuel-${row.id}`,
       module: "Vehicle Fuel",
       title: row.requestId || "Fuel Request",
@@ -807,7 +807,7 @@ export async function GET(req: NextRequest) {
         }),
       ]);
 
-      const mappedRows: SummaryRequisitionRow[] = requisitionRows.map((row) => ({
+      const mappedRows: SummaryRequisitionRow[] = (requisitionRows as any[]).map((row: any) => ({
         id: row.id,
         requestId: row.requestId,
         requiredFor: row.requiredFor,
@@ -853,7 +853,7 @@ export async function GET(req: NextRequest) {
         (row) => row.requiredFor === VEHICLE_FUEL_MODULE_KEY,
       );
       const storeItems = await listStoreItems(String(dbUser.organizationId));
-      const users: SummaryUser[] = userRows.map((entry) => ({
+      const users: SummaryUser[] = (userRows as any[]).map((entry: any) => ({
         id: entry.id,
         fullName: entry.fullName,
         email: entry.email,
