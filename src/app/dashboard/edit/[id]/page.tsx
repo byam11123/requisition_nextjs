@@ -57,8 +57,8 @@ export default function EditRequisitionPage({ params }: { params: Promise<{ id: 
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Update failed');
-      router.push('/dashboard');
-    } catch (err: any) { setError(err.message); }
+      router.push('/dashboard/requisition');
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'Update failed'); }
     finally { setSaving(false); }
   };
 
@@ -73,11 +73,11 @@ export default function EditRequisitionPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
-      <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
-        <ArrowLeft size={16} /> Back to Dashboard
+      <Link href="/dashboard/requisition" className="inline-flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
+        <ArrowLeft size={16} /> Back to Requisition
       </Link>
 
-      <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-8">
+      <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-5 sm:p-6 lg:p-8">
         <h1 className="text-2xl font-bold text-slate-100 mb-1">Edit Requisition</h1>
         <p className="text-slate-400 text-sm mb-6">Update the details of your requisition below.</p>
 
@@ -130,8 +130,8 @@ export default function EditRequisitionPage({ params }: { params: Promise<{ id: 
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
-            <Link href="/dashboard" className="px-6 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 text-sm font-medium">
+          <div className="flex flex-col gap-3 border-t border-white/5 pt-4 sm:flex-row sm:justify-end">
+            <Link href="/dashboard/requisition" className="px-6 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 text-sm font-medium">
               Cancel
             </Link>
             <button type="submit" disabled={saving}

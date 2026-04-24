@@ -6,9 +6,12 @@ import {
   findDevUserByEmail,
   updateDevUserLastLogin,
   verifyDevUserPassword,
-} from "@/lib/dev-auth-store";
+} from "@/lib/stores/dev-auth-store";
+import { getEffectiveRoleContext } from "@/lib/effective-role-context";
 import { prisma } from "@/lib/prisma";
-import { getUserPageAccess } from "@/lib/user-page-access-store";
+import { getUserPageAccess } from "@/lib/stores/user-page-access-store";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
 
 const DEV_USERS: Record<string, { id: string; fullName: string; role: string }> = {
   "admin@example.com": { id: "9999", fullName: "Test Admin", role: "ADMIN" },
@@ -45,9 +48,23 @@ export async function POST(req: NextRequest) {
       const devUser = DEV_USERS[normalizedEmail];
       const token = generateToken(devUser.id, devUser.role);
       const pageAccess = await getUserPageAccess(devUser.id);
+      const roleContext = await getEffectiveRoleContext({
+        userId: devUser.id,
+        baseRole: devUser.role,
+        organizationId: "demo",
+      });
       return NextResponse.json({
         token,
-        user: { ...devUser, email: normalizedEmail, organizationId: "1", pageAccess },
+        user: {
+          ...devUser,
+          email: normalizedEmail,
+          organizationId: "1",
+          pageAccess,
+          baseRole: devUser.role,
+          customRoleKey: roleContext?.roleKey || devUser.role,
+          customRoleName: roleContext?.roleName || devUser.role,
+          rolePageAccess: roleContext?.rolePageAccess || null,
+        },
       });
     }
 
@@ -61,6 +78,11 @@ export async function POST(req: NextRequest) {
       updateDevUserLastLogin(verifiedUser.id);
       const token = generateToken(verifiedUser.id, verifiedUser.role);
       const pageAccess = await getUserPageAccess(verifiedUser.id);
+      const roleContext = await getEffectiveRoleContext({
+        userId: verifiedUser.id,
+        baseRole: verifiedUser.role,
+        organizationId: verifiedUser.organizationId,
+      });
 
       return NextResponse.json({
         token,
@@ -73,6 +95,10 @@ export async function POST(req: NextRequest) {
           department: verifiedUser.department,
           designation: verifiedUser.designation,
           pageAccess,
+          baseRole: verifiedUser.role,
+          customRoleKey: roleContext?.roleKey || verifiedUser.role,
+          customRoleName: roleContext?.roleName || verifiedUser.role,
+          rolePageAccess: roleContext?.rolePageAccess || null,
         },
       });
     }
@@ -83,13 +109,30 @@ export async function POST(req: NextRequest) {
         include: { organization: true },
       });
 
-      if (!user || !user.passwordHash) {
+      if (!user) {
         return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
       }
 
-      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-      if (!isValidPassword) {
-        return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      // ── Supabase Auth Login ────────────────────────────────────────────
+      const cookieStore = await cookies();
+      const supabase = createClient(cookieStore);
+
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: password,
+      });
+
+      if (authError) {
+        console.error("Supabase Auth login error:", authError);
+        // Fallback to manual bcrypt check if user exists in DB but not in Supabase Auth yet
+        if (user.passwordHash) {
+          const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+          if (!isValidPassword) {
+            return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+          }
+        } else {
+          return NextResponse.json({ error: authError.message }, { status: 401 });
+        }
       }
 
       if (!user.isActive || !user.organization.isActive) {
@@ -103,10 +146,18 @@ export async function POST(req: NextRequest) {
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { lastLogin: new Date() },
+        data: { 
+          lastLogin: new Date(),
+          ...(user.supabaseUid ? {} : (authData.user ? { supabaseUid: authData.user.id } : {}))
+        },
       });
 
       const pageAccess = await getUserPageAccess(user.id);
+      const roleContext = await getEffectiveRoleContext({
+        userId: user.id.toString(),
+        baseRole: user.role,
+        organizationId: user.organizationId,
+      });
 
       return NextResponse.json({
         token,
@@ -119,6 +170,10 @@ export async function POST(req: NextRequest) {
           department: user.department,
           designation: user.designation,
           pageAccess,
+          baseRole: user.role,
+          customRoleKey: roleContext?.roleKey || user.role,
+          customRoleName: roleContext?.roleName || user.role,
+          rolePageAccess: roleContext?.rolePageAccess || null,
         },
       });
     } catch (dbError) {
@@ -139,3 +194,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

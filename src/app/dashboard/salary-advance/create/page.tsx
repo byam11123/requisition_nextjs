@@ -167,7 +167,7 @@ export default function CreateSalaryAdvancePage() {
         <ArrowLeft size={16} /> Back to Salary Advance
       </Link>
 
-      <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-8">
+      <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-5 sm:p-6 lg:p-8">
         <h1 className="mb-1 text-2xl font-bold text-slate-100">
           New Salary Advance Request
         </h1>

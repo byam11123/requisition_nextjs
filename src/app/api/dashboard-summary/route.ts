@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import {
   findDevOrganizationById,
   findDevUserById,
   getDevUsersForOrganization,
-} from "@/lib/dev-auth-store";
+} from "@/lib/stores/dev-auth-store";
 import { prisma } from "@/lib/prisma";
 
 declare global {
@@ -18,10 +19,15 @@ BigInt.prototype.toJSON = function () {
   return this.toString();
 };
 
+hydrateDemoModuleGlobals();
+
 const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
 const REPAIR_MODULE_KEY = "REPAIR_MAINTAINANCE";
 const ATTENDANCE_MODULE_KEY = "DRIVER_ATTENDANCE";
 const SALARY_ADVANCE_MODULE_KEY = "SALARY_ADVANCE";
+const VEHICLE_FUEL_MODULE_KEY = "VEHICLE_FUEL";
+
+import { listStoreItems } from "@/lib/stores/store-management-store";
 
 type SummaryUser = {
   id: bigint | string;
@@ -113,10 +119,10 @@ type SearchResult = {
 };
 
 type ModuleStat = {
-  key: "requisitions" | "repair" | "attendance" | "salaryAdvance";
+  key: "requisitions" | "repair" | "attendance" | "salaryAdvance" | "vehicleFuel" | "store";
   label: string;
   href: string;
-  tone: "indigo" | "emerald" | "amber" | "purple";
+  tone: "indigo" | "emerald" | "amber" | "purple" | "sky" | "rose";
   total: number;
   pending: number;
   completed: number;
@@ -129,6 +135,8 @@ type TrendPoint = {
   repair: number;
   attendance: number;
   salaryAdvance: number;
+  vehicleFuel: number;
+  store: number;
 };
 
 const parseJsonObject = <T extends object>(raw: string | null | undefined): T => {
@@ -192,6 +200,8 @@ const buildTrendSeries = (
   repairs: SummaryRequisitionRow[],
   attendance: SummaryRequisitionRow[],
   salaryAdvances: SummaryRequisitionRow[],
+  vehicleFuel: SummaryRequisitionRow[],
+  storeItems: any[],
 ): TrendPoint[] => {
   const dayFormatter = new Intl.DateTimeFormat("en-IN", { weekday: "short" });
   const now = new Date();
@@ -215,6 +225,8 @@ const buildTrendSeries = (
       repair: repairs.filter((row) => inRange(row.submittedAt || row.createdAt)).length,
       attendance: attendance.filter((row) => inRange(row.submittedAt || row.createdAt)).length,
       salaryAdvance: salaryAdvances.filter((row) => inRange(row.submittedAt || row.createdAt)).length,
+      vehicleFuel: vehicleFuel.filter((row) => inRange(row.submittedAt || row.createdAt)).length,
+      store: storeItems.filter((item) => inRange(item.createdAt)).length,
     };
   });
 };
@@ -242,9 +254,10 @@ const buildRecentActivities = (
   repairs: SummaryRequisitionRow[],
   attendance: SummaryRequisitionRow[],
   salaryAdvances: SummaryRequisitionRow[],
+  vehicleFuel: SummaryRequisitionRow[],
 ) => {
   const items: RecentActivity[] = [
-    ...requisitions.map((row) => ({
+    ...requisitions.map((row: SummaryRequisitionRow) => ({
       id: `req-${row.id}`,
       module: "Requisition",
       title: row.requestId || "Requisition",
@@ -253,7 +266,7 @@ const buildRecentActivities = (
       href: `/dashboard/req/${row.id}`,
       tone: "indigo" as const,
     })),
-    ...repairs.map((row) => ({
+    ...repairs.map((row: SummaryRequisitionRow) => ({
       id: `repair-${row.id}`,
       module: "Repair",
       title: row.requestId || "Repair Case",
@@ -262,7 +275,7 @@ const buildRecentActivities = (
       href: `/dashboard/repair-maintainance/${row.id}`,
       tone: "emerald" as const,
     })),
-    ...attendance.map((row) => {
+    ...attendance.map((row: SummaryRequisitionRow) => {
       const meta = parseJsonObject<AttendanceMeta>(row.cardSubtitleInfo);
       return {
         id: `attendance-${row.id}`,
@@ -274,7 +287,7 @@ const buildRecentActivities = (
         tone: "amber" as const,
       };
     }),
-    ...salaryAdvances.map((row) => {
+    ...salaryAdvances.map((row: SummaryRequisitionRow) => {
       const meta = parseJsonObject<SalaryAdvanceMeta>(row.cardSubtitleInfo);
       return {
         id: `salary-${row.id}`,
@@ -286,6 +299,15 @@ const buildRecentActivities = (
         tone: "purple" as const,
       };
     }),
+    ...vehicleFuel.map((row: SummaryRequisitionRow) => ({
+      id: `fuel-${row.id}`,
+      module: "Vehicle Fuel",
+      title: row.requestId || "Fuel Request",
+      description: `${row.materialDescription || "Vehicle"} · ${row.siteAddress || "No site"}`,
+      timestamp: toIsoString(row.submittedAt || row.createdAt),
+      href: `/dashboard/vehicle-fuel`,
+      tone: "sky" as const,
+    })),
   ];
 
   return items
@@ -301,6 +323,7 @@ const buildNotifications = (
   repairs: SummaryRequisitionRow[],
   attendance: SummaryRequisitionRow[],
   salaryAdvances: SummaryRequisitionRow[],
+  vehicleFuel: SummaryRequisitionRow[],
   users: SummaryUser[],
 ) => {
   const pendingRequisitions = requisitions.filter(
@@ -337,7 +360,7 @@ const buildNotifications = (
       id: "pending-requisitions",
       title: `${pendingRequisitions} requisitions need attention`,
       description: "Pending approval requests are stacking up in the purchase register.",
-      href: "/dashboard",
+      href: "/dashboard/requisition",
       tone: "amber",
     });
   }
@@ -527,6 +550,8 @@ const buildModuleStats = (
   repairs: SummaryRequisitionRow[],
   attendance: SummaryRequisitionRow[],
   salaryAdvances: SummaryRequisitionRow[],
+  vehicleFuel: SummaryRequisitionRow[],
+  storeItems: any[],
 ): ModuleStat[] => {
   const salaryOutstanding = salaryAdvances.filter((row) => {
     const meta = parseJsonObject<SalaryAdvanceMeta>(row.cardSubtitleInfo);
@@ -547,7 +572,7 @@ const buildModuleStats = (
     {
       key: "requisitions",
       label: "Requisitions",
-      href: "/dashboard",
+      href: "/dashboard/requisition",
       tone: "indigo",
       total: requisitions.length,
       pending: requisitions.filter((row) => row.approvalStatus === "PENDING").length,
@@ -586,6 +611,32 @@ const buildModuleStats = (
       completed: salaryAdvances.filter((row) => row.approvalStatus === "APPROVED").length,
       attention: salaryOutstanding,
     },
+    {
+      key: "vehicleFuel",
+      label: "Vehicle Fuel",
+      href: "/dashboard/vehicle-fuel",
+      tone: "sky",
+      total: vehicleFuel.length,
+      pending: vehicleFuel.filter((row) => row.approvalStatus === "PENDING").length,
+      completed: vehicleFuel.filter((row) => {
+        const meta = parseJsonObject<{ billPhotoUrl?: string }>(row.cardSubtitleInfo);
+        return !!meta.billPhotoUrl;
+      }).length,
+      attention: vehicleFuel.filter((row) => {
+        const meta = parseJsonObject<{ billPhotoUrl?: string }>(row.cardSubtitleInfo);
+        return row.approvalStatus === "APPROVED" && !meta.billPhotoUrl;
+      }).length,
+    },
+    {
+      key: "store",
+      label: "Store Management",
+      href: "/dashboard/store",
+      tone: "rose",
+      total: storeItems.length,
+      pending: 0,
+      completed: storeItems.length,
+      attention: storeItems.filter((item) => (item.stock || 0) < (item.minStock || 5)).length,
+    },
   ];
 };
 
@@ -597,6 +648,8 @@ const buildSummaryResponse = (
   repairs: SummaryRequisitionRow[],
   attendance: SummaryRequisitionRow[],
   salaryAdvances: SummaryRequisitionRow[],
+  vehicleFuel: SummaryRequisitionRow[],
+  storeItems: any[],
   users: SummaryUser[],
 ) => {
   const moduleStats = buildModuleStats(
@@ -604,12 +657,15 @@ const buildSummaryResponse = (
     repairs,
     attendance,
     salaryAdvances,
+    vehicleFuel,
+    storeItems,
   );
   const notifications = buildNotifications(
     requisitions,
     repairs,
     attendance,
     salaryAdvances,
+    vehicleFuel,
     users,
   );
 
@@ -621,7 +677,9 @@ const buildSummaryResponse = (
         requisitions.length +
         repairs.length +
         attendance.length +
-        salaryAdvances.length,
+        salaryAdvances.length +
+        vehicleFuel.length +
+        storeItems.length,
       pendingApprovals: moduleStats.reduce((sum, item) => sum + item.pending, 0),
       activeUsers: users.filter((entry) => entry.isActive).length,
       reminders: notifications.length,
@@ -632,6 +690,8 @@ const buildSummaryResponse = (
       repairs,
       attendance,
       salaryAdvances,
+      vehicleFuel,
+      storeItems,
     ),
     siteBreakdown: buildSiteBreakdown([...requisitions, ...repairs]),
     notifications,
@@ -640,6 +700,7 @@ const buildSummaryResponse = (
       repairs,
       attendance,
       salaryAdvances,
+      vehicleFuel,
     ),
     searchResults: buildSearchResults(
       query,
@@ -674,6 +735,9 @@ export async function GET(req: NextRequest) {
       const repairs = globalStore.__devRepairStore || [];
       const attendance = globalStore.__devAttendanceStore || [];
       const salaryAdvances = globalStore.__devSalaryAdvanceStore || [];
+      const vehicleFuel = globalStore.__devReqStore?.filter(r => r.requiredFor === VEHICLE_FUEL_MODULE_KEY) || [];
+      const storeItems = await listStoreItems("demo-org-id");
+      
       const users: SummaryUser[] = [
         {
           id: user.sub,
@@ -691,10 +755,12 @@ export async function GET(req: NextRequest) {
           "Demo Organization",
           user.role,
           query,
-          requisitions,
+          requisitions.filter(r => !r.requiredFor || (r.requiredFor !== REPAIR_MODULE_KEY && r.requiredFor !== ATTENDANCE_MODULE_KEY && r.requiredFor !== SALARY_ADVANCE_MODULE_KEY && r.requiredFor !== VEHICLE_FUEL_MODULE_KEY)),
           repairs,
           attendance,
           salaryAdvances,
+          vehicleFuel as any,
+          storeItems,
           users,
         ),
       );
@@ -741,7 +807,7 @@ export async function GET(req: NextRequest) {
         }),
       ]);
 
-      const mappedRows: SummaryRequisitionRow[] = requisitionRows.map((row) => ({
+      const mappedRows: SummaryRequisitionRow[] = (requisitionRows as any[]).map((row: any) => ({
         id: row.id,
         requestId: row.requestId,
         requiredFor: row.requiredFor,
@@ -771,7 +837,8 @@ export async function GET(req: NextRequest) {
         (row) =>
           row.requiredFor !== REPAIR_MODULE_KEY &&
           row.requiredFor !== ATTENDANCE_MODULE_KEY &&
-          row.requiredFor !== SALARY_ADVANCE_MODULE_KEY,
+          row.requiredFor !== SALARY_ADVANCE_MODULE_KEY &&
+          row.requiredFor !== VEHICLE_FUEL_MODULE_KEY,
       );
       const repairs = mappedRows.filter(
         (row) => row.requiredFor === REPAIR_MODULE_KEY,
@@ -782,7 +849,11 @@ export async function GET(req: NextRequest) {
       const salaryAdvances = mappedRows.filter(
         (row) => row.requiredFor === SALARY_ADVANCE_MODULE_KEY,
       );
-      const users: SummaryUser[] = userRows.map((entry) => ({
+      const vehicleFuel = mappedRows.filter(
+        (row) => row.requiredFor === VEHICLE_FUEL_MODULE_KEY,
+      );
+      const storeItems = await listStoreItems(String(dbUser.organizationId));
+      const users: SummaryUser[] = (userRows as any[]).map((entry: any) => ({
         id: entry.id,
         fullName: entry.fullName,
         email: entry.email,
@@ -801,6 +872,8 @@ export async function GET(req: NextRequest) {
           repairs,
           attendance,
           salaryAdvances,
+          vehicleFuel,
+          storeItems,
           users,
         ),
       );
@@ -815,6 +888,8 @@ export async function GET(req: NextRequest) {
             organization?.name || "Development Organization",
             user.role,
             query,
+            [],
+            [],
             [],
             [],
             [],
@@ -842,3 +917,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

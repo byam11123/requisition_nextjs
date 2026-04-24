@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 
 declare global {
   interface BigInt {
@@ -10,6 +11,8 @@ declare global {
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
+
+hydrateDemoModuleGlobals();
 
 const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
 const MODULE_KEY = "REPAIR_MAINTAINANCE";
@@ -122,7 +125,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(mapRepair(row));
   } catch (error) {
-    console.error("Repair/Maintainance detail GET error:", error);
+    console.error("Repair/Maintenance detail GET error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -138,7 +141,29 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     const store: any[] = g.__devRepairStore || [];
     const idx = store.findIndex((r) => String(r.id) === String(id));
     if (idx === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    store[idx] = { ...store[idx], ...body };
+    const prev = store[idx];
+    const nextDispatchStatus = body.dispatchStatus ?? prev.dispatchStatus;
+    const nextDeliveryStatus = body.deliveryStatus ?? prev.deliveryStatus;
+    store[idx] = {
+      ...prev,
+      ...body,
+      dispatchedAt:
+        nextDispatchStatus === "DISPATCHED" && prev.dispatchStatus !== "DISPATCHED"
+          ? new Date().toISOString()
+          : prev.dispatchedAt,
+      dispatchedByName:
+        nextDispatchStatus === "DISPATCHED" && prev.dispatchStatus !== "DISPATCHED"
+          ? body.dispatchByName || prev.dispatchByName || "Test User"
+          : prev.dispatchedByName,
+      deliveredAt:
+        nextDeliveryStatus === "DELIVERED" && prev.deliveryStatus !== "DELIVERED"
+          ? new Date().toISOString()
+          : prev.deliveredAt,
+      deliveredByName:
+        nextDeliveryStatus === "DELIVERED" && prev.deliveryStatus !== "DELIVERED"
+          ? body.receivedBy || prev.receivedBy || "Test User"
+          : prev.deliveredByName,
+    };
     return NextResponse.json(store[idx]);
   }
 
@@ -163,6 +188,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       returnedByName: body.returnedByName ?? prevMeta.returnedByName ?? "",
       dateOfReturn: body.dateOfReturn ?? prevMeta.dateOfReturn ?? "",
       dispatchSite: body.dispatchSite ?? prevMeta.dispatchSite ?? "",
+      dispatchByName: body.dispatchByName ?? prevMeta.dispatchByName ?? "",
       dispatchDate: body.dispatchDate ?? prevMeta.dispatchDate ?? "",
       receivedBy: body.receivedBy ?? prevMeta.receivedBy ?? "",
       receivedDate: body.receivedDate ?? prevMeta.receivedDate ?? "",
@@ -199,7 +225,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     return NextResponse.json(mapRepair(updated));
   } catch (error) {
-    console.error("Repair/Maintainance detail PUT error:", error);
+    console.error("Repair/Maintenance detail PUT error:", error);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 ---
 name: requisition-backend-api
-description: Build, extend, or review backend API logic for this Requisition App Next repository. Use when working on App Router route handlers in `src/app/api/**`, Prisma data access, JWT auth helpers, role-based workflow logic, uploads, dev bypass stores, or schema-backed backend changes tied to requisitions, repair-maintainance, users, login, and related modules.
+description: Build, extend, or review backend API logic for this Requisition App Next repository. Use when working on App Router route handlers in `src/app/api/**`, Prisma data access, JWT auth helpers, role-based workflow logic, custom roles, designations, page access, demo seed tooling, uploads, dev bypass stores, or schema-backed backend changes tied to requisitions, repair-maintainance, users, login, and related modules.
 ---
 
 # Requisition Backend Api
@@ -19,7 +19,9 @@ Read [references/project-backend-patterns.md](references/project-backend-pattern
    - auth or identity
    - requisition CRUD
    - approval, payment, or dispatch workflow
+   - custom roles, designations, or page access
    - repair-maintainance data mapping
+   - demo seed or offline module stores
    - uploads and file persistence
    - Prisma schema/data model
 4. Reuse the closest local route pattern first.
@@ -42,6 +44,11 @@ Read [references/project-backend-patterns.md](references/project-backend-pattern
   - `500` for unexpected failures
 - Keep backend logic close to the route for now; do not introduce a service layer unless the user asks for that refactor.
 - Preserve the current dev-bypass approach for test users when touching modules that already use it.
+- Keep organization-aware config systems separate:
+  - custom roles = permission/workflow identity
+  - designations = company titles
+  - page access = explicit per-user page visibility override
+- When adding admin configurability, prefer extending existing store helpers in `src/lib/**` over inventing a second persistence style.
 
 ## Prisma Rules
 
@@ -66,6 +73,14 @@ Read [references/project-backend-patterns.md](references/project-backend-pattern
   - `src/app/api/requisitions/[id]/dispatch/route.ts`
 - For file uploads, start from:
   - `src/app/api/uploads/route.ts`
+- For org config systems, start from:
+  - `src/app/api/custom-roles/route.ts`
+  - `src/app/api/designations/route.ts`
+  - `src/app/api/users/[id]/page-access/route.ts`
+- For demo/offline seed tooling, start from:
+  - `src/app/api/demo/seed/route.ts`
+  - `src/lib/demo-seed.ts`
+  - `src/lib/demo-module-store.ts`
 
 ## Frontend Contract Rules
 
@@ -73,6 +88,7 @@ Read [references/project-backend-patterns.md](references/project-backend-pattern
 - If a route is shaping DB rows into frontend-specific objects, preserve that mapping style unless the user asks to redesign the contract.
 - For repair-maintainance, remember the module is stored on top of the requisition model plus `cardSubtitleInfo` JSON metadata.
 - Keep both database-backed and dev-store-backed response objects aligned.
+- When a designation has a `defaultCustomRoleKey`, backend write paths should honor that as a fallback, but still allow explicit role overrides.
 
 ## Concrete Examples
 
@@ -115,6 +131,31 @@ Good suggestion:
 
 - "Mirror the existing payment route shape and update both the in-memory dev store and Prisma update block in the same change."
 
+### Roles / designations / page access
+
+When updating organization configuration systems:
+
+- Keep custom roles, designations, workflow config, and per-user page access as separate stores.
+- Validate referenced keys, such as `defaultCustomRoleKey`, before saving config.
+- Prefer file-backed fallback persistence for offline/dev organization configs.
+- Keep login and users endpoints aligned with any new effective-role fields the frontend needs.
+
+Good suggestion:
+
+- "Save the designation mapping in its own store, validate the referenced custom role, and keep user creation backward-compatible by accepting both explicit role input and designation-based fallback."
+
+### Demo seed tooling
+
+When updating the demo/test data system:
+
+- Seed one coherent organization story instead of random unrelated rows.
+- Keep module stores aligned so overview, detail pages, uploads, and workflow actions all see the same records.
+- Prefer shared hydration helpers over re-declaring different demo arrays in each route.
+
+Good suggestion:
+
+- "Populate the shared demo store once, then hydrate it in each route so demo data survives normal refreshes and stays consistent across modules."
+
 ### Upload route
 
 When updating uploads:
@@ -134,6 +175,7 @@ When the user asks for a backend change, review your output against this checkli
 - Did I preserve response shapes expected by the frontend?
 - Did I read the Prisma schema before touching data fields?
 - If files or workflow states changed, did I update all related branches consistently?
+- If the route has offline/dev behavior, did I keep the shared demo/module store in sync too?
 
 ## Suggesting Better Versions
 
@@ -142,6 +184,7 @@ When the user gives a vague backend request, propose better options grounded in 
 - "Extend the existing requisition route instead of creating a second parallel endpoint."
 - "Keep repair metadata in `cardSubtitleInfo` unless we are ready for a schema migration."
 - "Update both the dev store and Prisma path together so local testing and real data behave the same."
+- "Keep roles, designations, workflow config, and page access separate so admin configuration stays understandable."
 
 Do not suggest a large backend abstraction or architectural rewrite unless the user explicitly wants one.
 
@@ -150,3 +193,4 @@ Do not suggest a large backend abstraction or architectural rewrite unless the u
 - This repo currently favors pragmatic route-local logic over deeper backend layering.
 - The frontend often depends on backend-shaped fields directly, so contract drift is costly.
 - When changing workflow logic, check approve, payment, and dispatch routes together instead of in isolation.
+- This repo now includes file-backed offline helpers for custom roles, designations, workflow config, user page access, user custom roles, and demo module seed data. Reuse those helpers before adding a new storage path.

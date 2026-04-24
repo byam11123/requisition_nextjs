@@ -21,8 +21,73 @@ model Organization {
 
   users             User[]
   requisitions      Requisition[]
+  workflowConfig    WorkflowConfig?
+  customRoleConfig  CustomRoleConfig?
+  contactConfig     ContactConfig?
+  designationConfig DesignationConfig?
+  storeConfig       StoreManagementConfig?
 
   @@map("organizations")
+}
+
+model WorkflowConfig {
+  id             BigInt   @id @default(autoincrement())
+  organizationId BigInt   @unique @map("organization_id")
+  payload        String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("workflow_configs")
+}
+
+model CustomRoleConfig {
+  id             BigInt   @id @default(autoincrement())
+  organizationId BigInt   @unique @map("organization_id")
+  payload        String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("custom_role_configs")
+}
+
+model ContactConfig {
+  id             BigInt   @id @default(autoincrement())
+  organizationId BigInt   @unique @map("organization_id")
+  payload        String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("contact_configs")
+}
+
+model DesignationConfig {
+  id             BigInt   @id @default(autoincrement())
+  organizationId BigInt   @unique @map("organization_id")
+  payload        String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("designation_configs")
+}
+
+model StoreManagementConfig {
+  id             BigInt   @id @default(autoincrement())
+  organizationId BigInt   @unique @map("organization_id")
+  payload        String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("store_management_configs")
 }
 
 model User {
@@ -35,7 +100,10 @@ model User {
   role            UserRole
   department      String?
   designation     String?
-  isActive        Boolean        @default(true)
+  customRoleKey      String?        @map("custom_role_key")
+  pageAccessOverride String?        @map("page_access_override") @db.Text
+  supabaseUid        String?        @unique @map("supabase_uid") @db.Uuid
+  isActive           Boolean        @default(true)
   lastLogin       DateTime?
   createdAt       DateTime       @default(now())
 

@@ -16,6 +16,8 @@ export type DriverAttendanceRecord = {
   vehicleName: string;
   vehicleNumber: string;
   geoTagPhotoUrl: string | null;
+  approvedAt?: string | null;
+  approvedByName?: string | null;
 };
 
 export function formatAttendanceDate(value: string) {
@@ -38,6 +40,16 @@ export function getAttendanceStatusClasses(status: AttendanceStatus) {
     return "bg-rose-500/10 text-rose-400 border-rose-500/20";
   }
   return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+}
+
+export function getAttendanceStatusTone(status: AttendanceStatus) {
+  if (status === "APPROVED") {
+    return "emerald" as const;
+  }
+  if (status === "REJECTED") {
+    return "rose" as const;
+  }
+  return "amber" as const;
 }
 
 export function getAttendanceRouteType(record: DriverAttendanceRecord) {

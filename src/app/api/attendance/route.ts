@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
-import { findDevUserById } from "@/lib/dev-auth-store";
+import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
+import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { prisma } from "@/lib/prisma";
 
 declare global {
@@ -13,6 +14,8 @@ declare global {
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
+
+hydrateDemoModuleGlobals();
 
 const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
 const MODULE_KEY = "DRIVER_ATTENDANCE";
@@ -33,6 +36,8 @@ type AttendanceRecord = {
   vehicleName: string;
   vehicleNumber: string;
   geoTagPhotoUrl: string | null;
+  approvedAt?: string | null;
+  approvedByName?: string | null;
 };
 
 type AttendanceStoreGlobal = typeof globalThis & {
@@ -65,6 +70,10 @@ type AttendanceRow = {
   createdBy?: {
     fullName?: string | null;
   } | null;
+  approvedBy?: {
+    fullName?: string | null;
+  } | null;
+  approvedAt?: Date | string | null;
 };
 
 const g = globalThis as AttendanceStoreGlobal;
@@ -142,6 +151,13 @@ const mapAttendanceRecord = (row: AttendanceRow) => {
     vehicleName: meta.vehicleName || row.vendorName || row.vehicleName || "",
     vehicleNumber: meta.vehicleNumber || row.vehicleNumber || "",
     geoTagPhotoUrl: row.materialPhotoUrl || row.geoTagPhotoUrl || null,
+    approvedAt:
+      typeof row.approvedAt === "string"
+        ? row.approvedAt
+        : row.approvedAt
+          ? new Date(row.approvedAt).toISOString()
+          : null,
+    approvedByName: row.approvedBy?.fullName || null,
   };
 };
 
@@ -182,6 +198,7 @@ export async function GET(req: NextRequest) {
         },
         include: {
           createdBy: { select: { fullName: true } },
+          approvedBy: { select: { fullName: true } },
         },
         orderBy: { createdAt: "desc" },
       });
@@ -329,3 +346,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

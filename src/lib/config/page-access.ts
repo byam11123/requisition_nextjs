@@ -2,14 +2,22 @@ export type DashboardRole = "ADMIN" | "PURCHASER" | "MANAGER" | "ACCOUNTANT";
 
 export type DashboardPageKey =
   | "overview"
+  | "roles"
+  | "designations"
+  | "contactManager"
+  | "store"
   | "requisition"
+  | "workflow"
   | "repair"
+  | "vehicleFuel"
   | "attendance"
   | "salaryAdvance"
   | "users"
   | "profile"
+  | "newStoreItem"
   | "newRequisition"
   | "newRepairRequest"
+  | "newVehicleFuel"
   | "newAttendance"
   | "newSalaryAdvance";
 
@@ -27,14 +35,23 @@ type DashboardPathRule = {
 
 const DASHBOARD_PATH_RULES: DashboardPathRule[] = [
   { key: "overview", href: "/dashboard/overview" },
+  { key: "roles", href: "/dashboard/roles" },
+  { key: "designations", href: "/dashboard/designations" },
+  { key: "contactManager", href: "/dashboard/contact-manager" },
+  { key: "newStoreItem", href: "/dashboard/store/items/create" },
+  { key: "store", href: "/dashboard/store" },
+  { key: "workflow", href: "/dashboard/workflow" },
   { key: "users", href: "/dashboard/users" },
   { key: "newRepairRequest", href: "/dashboard/repair-maintainance/create" },
   { key: "repair", href: "/dashboard/repair-maintainance" },
+  { key: "newVehicleFuel", href: "/dashboard/vehicle-fuel/create" },
+  { key: "vehicleFuel", href: "/dashboard/vehicle-fuel" },
   { key: "newAttendance", href: "/dashboard/attendance/create" },
   { key: "attendance", href: "/dashboard/attendance" },
   { key: "newSalaryAdvance", href: "/dashboard/salary-advance/create" },
   { key: "salaryAdvance", href: "/dashboard/salary-advance" },
   { key: "newRequisition", href: "/dashboard/create" },
+  { key: "requisition", href: "/dashboard/requisition" },
   { key: "requisition", href: "/dashboard/req" },
   { key: "requisition", href: "/dashboard/edit" },
   { key: "profile", href: "/dashboard/profile" },
@@ -49,9 +66,39 @@ export const DASHBOARD_PAGE_OPTIONS: DashboardPageOption[] = [
     description: "Main command center and overview widgets.",
   },
   {
+    key: "roles",
+    label: "Custom Roles",
+    href: "/dashboard/roles",
+    description: "Create organization-specific roles and their page defaults.",
+  },
+  {
+    key: "designations",
+    label: "Designations",
+    href: "/dashboard/designations",
+    description: "Manage organization-specific job titles and designation defaults.",
+  },
+  {
+    key: "contactManager",
+    label: "Contact Manager",
+    href: "/dashboard/contact-manager",
+    description: "Bookmark for shared employee contacts and future repair sync.",
+  },
+  {
+    key: "store",
+    label: "Store Management",
+    href: "/dashboard/store",
+    description: "Visual inventory, QR item records, and multi-location stock control.",
+  },
+  {
+    key: "workflow",
+    label: "Workflow Config",
+    href: "/dashboard/workflow",
+    description: "Manage requisition workflow steps and role ownership.",
+  },
+  {
     key: "requisition",
     label: "Requisition",
-    href: "/dashboard",
+    href: "/dashboard/requisition",
     description: "Register, request details, and requisition records.",
   },
   {
@@ -59,6 +106,12 @@ export const DASHBOARD_PAGE_OPTIONS: DashboardPageOption[] = [
     label: "Repair & Maintenance",
     href: "/dashboard/repair-maintainance",
     description: "Repair register and repair detail pages.",
+  },
+  {
+    key: "vehicleFuel",
+    label: "Vehicle Daily Fuel",
+    href: "/dashboard/vehicle-fuel",
+    description: "Vehicle fuel requests, approvals, and bill completion.",
   },
   {
     key: "attendance",
@@ -85,6 +138,12 @@ export const DASHBOARD_PAGE_OPTIONS: DashboardPageOption[] = [
     description: "Own account profile page.",
   },
   {
+    key: "newStoreItem",
+    label: "New Store Item",
+    href: "/dashboard/store/items/create",
+    description: "Create a new visual inventory item with image and QR identity.",
+  },
+  {
     key: "newRequisition",
     label: "New Requisition",
     href: "/dashboard/create",
@@ -95,6 +154,12 @@ export const DASHBOARD_PAGE_OPTIONS: DashboardPageOption[] = [
     label: "New Repair Request",
     href: "/dashboard/repair-maintainance/create",
     description: "Create a new repair or breakdown request.",
+  },
+  {
+    key: "newVehicleFuel",
+    label: "New Vehicle Fuel",
+    href: "/dashboard/vehicle-fuel/create",
+    description: "Create a new daily diesel or petrol request for a vehicle.",
   },
   {
     key: "newAttendance",
@@ -114,25 +179,33 @@ export const ROLE_DEFAULT_PAGE_ACCESS: Record<DashboardRole, DashboardPageKey[]>
   ADMIN: DASHBOARD_PAGE_OPTIONS.map((page) => page.key),
   PURCHASER: [
     "overview",
+    "store",
     "requisition",
     "repair",
+    "vehicleFuel",
     "attendance",
     "profile",
+    "newStoreItem",
     "newRequisition",
     "newRepairRequest",
+    "newVehicleFuel",
     "newAttendance",
   ],
   MANAGER: [
     "overview",
+    "store",
     "requisition",
     "repair",
+    "vehicleFuel",
     "attendance",
     "salaryAdvance",
     "profile",
   ],
   ACCOUNTANT: [
     "overview",
+    "store",
     "requisition",
+    "vehicleFuel",
     "salaryAdvance",
     "profile",
     "newSalaryAdvance",
@@ -173,15 +246,21 @@ export function normalizeDashboardPageAccess(
 export function getEffectiveDashboardPageAccess(
   role?: string | null,
   pageAccess?: unknown,
+  rolePageAccess?: unknown,
 ) {
   const normalizedRole = normalizeDashboardRole(role);
-  if (!normalizedRole) {
-    return [] as DashboardPageKey[];
-  }
-
   const normalizedAccess = normalizeDashboardPageAccess(pageAccess);
   if (normalizedAccess) {
     return normalizedAccess;
+  }
+
+  const normalizedRoleAccess = normalizeDashboardPageAccess(rolePageAccess);
+  if (normalizedRoleAccess) {
+    return normalizedRoleAccess;
+  }
+
+  if (!normalizedRole) {
+    return [] as DashboardPageKey[];
   }
 
   return ROLE_DEFAULT_PAGE_ACCESS[normalizedRole];
@@ -199,31 +278,44 @@ export function canAccessDashboardPath(
   pathname: string,
   role?: string | null,
   pageAccess?: unknown,
+  rolePageAccess?: unknown,
 ) {
   const key = getDashboardPageKeyForPath(pathname);
   if (!key) {
     return false;
   }
 
-  return getEffectiveDashboardPageAccess(role, pageAccess).includes(key);
+  return getEffectiveDashboardPageAccess(role, pageAccess, rolePageAccess).includes(key);
 }
 
-export function getDefaultDashboardPath(role?: string | null, pageAccess?: unknown) {
-  const availablePages = getEffectiveDashboardPageAccess(role, pageAccess);
+export function getDefaultDashboardPath(
+  role?: string | null,
+  pageAccess?: unknown,
+  rolePageAccess?: unknown,
+) {
+  const availablePages = getEffectiveDashboardPageAccess(role, pageAccess, rolePageAccess);
   if (availablePages.length === 0) {
     return "/";
   }
 
   const preferredOrder: DashboardPageKey[] = [
     "overview",
+    "roles",
+    "designations",
+    "contactManager",
+    "store",
+    "workflow",
     "requisition",
     "repair",
+    "vehicleFuel",
     "attendance",
     "salaryAdvance",
     "profile",
     "users",
+    "newStoreItem",
     "newRequisition",
     "newRepairRequest",
+    "newVehicleFuel",
     "newAttendance",
     "newSalaryAdvance",
   ];
