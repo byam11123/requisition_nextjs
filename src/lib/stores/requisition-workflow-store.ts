@@ -18,7 +18,7 @@ type WorkflowFileStore = Record<string, RequisitionWorkflowConfig>;
 
 function readFileStore(): WorkflowFileStore {
   try {
-    if (!fs.existsSync(WORKFLOW_STORE_PATH)) {
+    if (process.env.VERCEL || !fs.existsSync(WORKFLOW_STORE_PATH)) {
       return {};
     }
 
@@ -36,6 +36,7 @@ function readFileStore(): WorkflowFileStore {
 }
 
 function writeFileStore(store: WorkflowFileStore) {
+  if (process.env.VERCEL) return;
   fs.mkdirSync(path.dirname(WORKFLOW_STORE_PATH), { recursive: true });
   fs.writeFileSync(WORKFLOW_STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }

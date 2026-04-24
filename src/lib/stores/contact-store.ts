@@ -57,7 +57,7 @@ export function normalizeContactDefinitions(value: unknown): ContactDefinition[]
 
 function readContactFileStore(): ContactStoreFile {
   try {
-    if (!fs.existsSync(CONTACT_STORE_PATH)) return {};
+    if (process.env.VERCEL || !fs.existsSync(CONTACT_STORE_PATH)) return {};
     const raw = fs.readFileSync(CONTACT_STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const normalizedEntries = Object.entries(parsed).flatMap(([key, value]) => {
@@ -71,6 +71,7 @@ function readContactFileStore(): ContactStoreFile {
 }
 
 function writeContactFileStore(store: ContactStoreFile) {
+  if (process.env.VERCEL) return;
   fs.mkdirSync(path.dirname(CONTACT_STORE_PATH), { recursive: true });
   fs.writeFileSync(CONTACT_STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }

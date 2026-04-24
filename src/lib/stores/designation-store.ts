@@ -98,7 +98,7 @@ export function normalizeDesignationDefinitions(value: unknown): DesignationDefi
 
 function readDesignationFileStore() {
   try {
-    if (!fs.existsSync(DESIGNATION_STORE_PATH)) {
+    if (process.env.VERCEL || !fs.existsSync(DESIGNATION_STORE_PATH)) {
       return {} as DesignationStoreFile;
     }
 
@@ -115,6 +115,7 @@ function readDesignationFileStore() {
 }
 
 function writeDesignationFileStore(store: DesignationStoreFile) {
+  if (process.env.VERCEL) return;
   fs.mkdirSync(path.dirname(DESIGNATION_STORE_PATH), { recursive: true });
   fs.writeFileSync(DESIGNATION_STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }

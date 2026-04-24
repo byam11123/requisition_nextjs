@@ -63,7 +63,7 @@ function normalizeStore(value: unknown): DemoModuleData {
 
 function readStore() {
   try {
-    if (!fs.existsSync(DEMO_MODULE_STORE_PATH)) {
+    if (process.env.VERCEL || !fs.existsSync(DEMO_MODULE_STORE_PATH)) {
       return defaultDemoModuleData();
     }
 
@@ -75,6 +75,7 @@ function readStore() {
 }
 
 function writeStore(store: DemoModuleData) {
+  if (process.env.VERCEL) return;
   fs.mkdirSync(path.dirname(DEMO_MODULE_STORE_PATH), { recursive: true });
   fs.writeFileSync(DEMO_MODULE_STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }

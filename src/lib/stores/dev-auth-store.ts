@@ -57,7 +57,7 @@ function loadState() {
   g.__devAuthLoaded = true;
 
   try {
-    if (!fs.existsSync(DEV_AUTH_STORE_PATH)) {
+    if (process.env.VERCEL || !fs.existsSync(DEV_AUTH_STORE_PATH)) {
       return;
     }
 
@@ -83,6 +83,7 @@ function loadState() {
 }
 
 function persistState() {
+  if (process.env.VERCEL) return;
   fs.mkdirSync(path.dirname(DEV_AUTH_STORE_PATH), { recursive: true });
 
   const payload: PersistedDevAuthState = {

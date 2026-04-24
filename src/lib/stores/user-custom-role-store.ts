@@ -12,7 +12,7 @@ type UserCustomRoleStore = Record<string, string>;
 
 function readUserCustomRoleStore() {
   try {
-    if (!fs.existsSync(USER_CUSTOM_ROLE_STORE_PATH)) {
+    if (process.env.VERCEL || !fs.existsSync(USER_CUSTOM_ROLE_STORE_PATH)) {
       return {} as UserCustomRoleStore;
     }
 
@@ -29,6 +29,7 @@ function readUserCustomRoleStore() {
 }
 
 function writeUserCustomRoleStore(store: UserCustomRoleStore) {
+  if (process.env.VERCEL) return;
   fs.mkdirSync(path.dirname(USER_CUSTOM_ROLE_STORE_PATH), { recursive: true });
   fs.writeFileSync(USER_CUSTOM_ROLE_STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }

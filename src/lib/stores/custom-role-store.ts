@@ -145,7 +145,7 @@ function mergeWithSystemDefaults(roles: CustomRoleDefinition[]) {
 
 function readCustomRoleFileStore() {
   try {
-    if (!fs.existsSync(CUSTOM_ROLE_STORE_PATH)) {
+    if (process.env.VERCEL || !fs.existsSync(CUSTOM_ROLE_STORE_PATH)) {
       return {} as CustomRoleStoreFile;
     }
 
@@ -162,6 +162,7 @@ function readCustomRoleFileStore() {
 }
 
 function writeCustomRoleFileStore(store: CustomRoleStoreFile) {
+  if (process.env.VERCEL) return;
   fs.mkdirSync(path.dirname(CUSTOM_ROLE_STORE_PATH), { recursive: true });
   fs.writeFileSync(CUSTOM_ROLE_STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }
