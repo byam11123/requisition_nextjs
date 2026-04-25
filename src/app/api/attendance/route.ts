@@ -17,7 +17,7 @@ BigInt.prototype.toJSON = function () {
 
 hydrateDemoModuleGlobals();
 
-const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
+
 const MODULE_KEY = "DRIVER_ATTENDANCE";
 
 type AttendanceRecord = {
@@ -40,9 +40,35 @@ type AttendanceRecord = {
   approvedByName?: string | null;
 };
 
-type AttendanceStoreGlobal = typeof globalThis & {
-  __devAttendanceStore?: AttendanceRecord[];
-  __devAttendanceCounter?: number;
+
+
+type AttendanceMeta = {
+  adminName?: string;
+  driverName?: string;
+  fromSiteName?: string;
+  toSiteName?: string;
+  fatherName?: string;
+  vehicleType?: string;
+  vehicleName?: string;
+  vehicleNumber?: string;
+};
+
+const parseMeta = (raw: string | null | undefined): AttendanceMeta => {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const mapApprovalStatusToAttendanceStatus = (
+  approvalStatus: string | null | undefined,
+): "PENDING" | "APPROVED" | "REJECTED" => {
+  if (approvalStatus === "APPROVED") return "APPROVED";
+  if (approvalStatus === "REJECTED") return "REJECTED";
+  return "PENDING";
 };
 
 type AttendanceRow = {
@@ -74,56 +100,6 @@ type AttendanceRow = {
     fullName?: string | null;
   } | null;
   approvedAt?: Date | string | null;
-};
-
-const g = globalThis as AttendanceStoreGlobal;
-if (!g.__devAttendanceStore) {
-  g.__devAttendanceStore = [];
-}
-if (typeof g.__devAttendanceCounter !== "number") {
-  g.__devAttendanceCounter = 0;
-}
-
-const devStore = (): AttendanceRecord[] => g.__devAttendanceStore ?? [];
-const nextDevId = (): { id: string; seq: number } => {
-  g.__devAttendanceCounter =
-    (typeof g.__devAttendanceCounter === "number"
-      ? g.__devAttendanceCounter
-      : 0) + 1;
-
-  return {
-    id: String(5000 + g.__devAttendanceCounter),
-    seq: g.__devAttendanceCounter,
-  };
-};
-
-type AttendanceMeta = {
-  adminName?: string;
-  driverName?: string;
-  fromSiteName?: string;
-  toSiteName?: string;
-  fatherName?: string;
-  vehicleType?: string;
-  vehicleName?: string;
-  vehicleNumber?: string;
-};
-
-const parseMeta = (raw: string | null | undefined): AttendanceMeta => {
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed ? parsed : {};
-  } catch {
-    return {};
-  }
-};
-
-const mapApprovalStatusToAttendanceStatus = (
-  approvalStatus: string | null | undefined,
-): "PENDING" | "APPROVED" | "REJECTED" => {
-  if (approvalStatus === "APPROVED") return "APPROVED";
-  if (approvalStatus === "REJECTED") return "REJECTED";
-  return "PENDING";
 };
 
 const mapAttendanceRecord = (row: AttendanceRow) => {
@@ -161,10 +137,7 @@ const mapAttendanceRecord = (row: AttendanceRow) => {
   };
 };
 
-const getDevAttendanceRecords = (organizationId?: string | null) =>
-  devStore().filter((record) =>
-    organizationId ? record.organizationId === organizationId : !record.organizationId,
-  );
+
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -173,15 +146,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const signedUpDevUser = findDevUserById(user.sub);
 
-    if (DEV_IDS.has(user.sub)) {
-      return NextResponse.json(getDevAttendanceRecords());
-    }
-
-    if (signedUpDevUser) {
-      return NextResponse.json(getDevAttendanceRecords(signedUpDevUser.organizationId));
-    }
 
     try {
       const dbUser = await prisma.user.findUnique({
@@ -237,54 +202,7 @@ export async function POST(req: NextRequest) {
       vehicleNumber: data.vehicleNumber || "",
     };
 
-    if (DEV_IDS.has(user.sub)) {
-      const { id: newId, seq } = nextDevId();
-      const year = new Date().getFullYear();
-      const created: AttendanceRecord = {
-        id: newId,
-        requestId: `ATT-${year}-${String(seq).padStart(4, "0")}`,
-        status: "PENDING",
-        approvalStatus: "PENDING",
-        timestamp: new Date().toISOString(),
-        adminName: payloadMeta.adminName || "Test Admin",
-        driverName: payloadMeta.driverName || "",
-        fromSiteName: payloadMeta.fromSiteName || "",
-        toSiteName: payloadMeta.toSiteName || "",
-        fatherName: payloadMeta.fatherName || "NA",
-        vehicleType: payloadMeta.vehicleType || "",
-        vehicleName: payloadMeta.vehicleName || "",
-        vehicleNumber: payloadMeta.vehicleNumber || "",
-        geoTagPhotoUrl: null,
-      };
 
-      devStore().unshift(created);
-      return NextResponse.json(created);
-    }
-
-    if (signedUpDevUser) {
-      const { id: newId, seq } = nextDevId();
-      const year = new Date().getFullYear();
-      const created: AttendanceRecord = {
-        id: newId,
-        organizationId: signedUpDevUser.organizationId,
-        requestId: `ATT-${year}-${String(seq).padStart(4, "0")}`,
-        status: "PENDING",
-        approvalStatus: "PENDING",
-        timestamp: new Date().toISOString(),
-        adminName: payloadMeta.adminName || signedUpDevUser.fullName,
-        driverName: payloadMeta.driverName || "",
-        fromSiteName: payloadMeta.fromSiteName || "",
-        toSiteName: payloadMeta.toSiteName || "",
-        fatherName: payloadMeta.fatherName || "NA",
-        vehicleType: payloadMeta.vehicleType || "",
-        vehicleName: payloadMeta.vehicleName || "",
-        vehicleNumber: payloadMeta.vehicleNumber || "",
-        geoTagPhotoUrl: null,
-      };
-
-      devStore().unshift(created);
-      return NextResponse.json(created);
-    }
 
     try {
       const dbUser = await prisma.user.findUnique({

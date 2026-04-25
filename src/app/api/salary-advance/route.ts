@@ -18,7 +18,7 @@ BigInt.prototype.toJSON = function () {
 
 hydrateDemoModuleGlobals();
 
-const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
+
 const MODULE_KEY = "SALARY_ADVANCE";
 
 type SalaryAdvanceDeduction = {
@@ -64,9 +64,16 @@ type SalaryAdvanceMeta = {
   deductionHistory?: SalaryAdvanceDeduction[];
 };
 
-type SalaryAdvanceStoreGlobal = typeof globalThis & {
-  __devSalaryAdvanceStore?: SalaryAdvanceRecord[];
-  __devSalaryAdvanceCounter?: number;
+
+
+const parseMeta = (raw: string | null | undefined): SalaryAdvanceMeta => {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed ? parsed : {};
+  } catch {
+    return {};
+  }
 };
 
 type SalaryAdvanceRow = {
@@ -86,37 +93,6 @@ type SalaryAdvanceRow = {
   approvedBy?: {
     fullName?: string | null;
   } | null;
-};
-
-const g = globalThis as SalaryAdvanceStoreGlobal;
-if (!g.__devSalaryAdvanceStore) {
-  g.__devSalaryAdvanceStore = [];
-}
-if (typeof g.__devSalaryAdvanceCounter !== "number") {
-  g.__devSalaryAdvanceCounter = 0;
-}
-
-const devStore = (): SalaryAdvanceRecord[] => g.__devSalaryAdvanceStore ?? [];
-const nextDevId = (): { id: string; seq: number } => {
-  g.__devSalaryAdvanceCounter =
-    (typeof g.__devSalaryAdvanceCounter === "number"
-      ? g.__devSalaryAdvanceCounter
-      : 0) + 1;
-
-  return {
-    id: String(8000 + g.__devSalaryAdvanceCounter),
-    seq: g.__devSalaryAdvanceCounter,
-  };
-};
-
-const parseMeta = (raw: string | null | undefined): SalaryAdvanceMeta => {
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed ? parsed : {};
-  } catch {
-    return {};
-  }
 };
 
 const mapApprovalStatusToStatus = (
@@ -180,10 +156,7 @@ const mapSalaryAdvanceRecord = (row: SalaryAdvanceRow): SalaryAdvanceRecord => {
   };
 };
 
-const getDevSalaryAdvanceRecords = (organizationId?: string | null) =>
-  devStore().filter((record) =>
-    organizationId ? record.organizationId === organizationId : !record.organizationId,
-  );
+
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -192,15 +165,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const signedUpDevUser = findDevUserById(user.sub);
 
-    if (DEV_IDS.has(user.sub)) {
-      return NextResponse.json(getDevSalaryAdvanceRecords());
-    }
-
-    if (signedUpDevUser) {
-      return NextResponse.json(getDevSalaryAdvanceRecords(signedUpDevUser.organizationId));
-    }
 
     try {
       const dbUser = await prisma.user.findUnique({
@@ -257,64 +222,7 @@ export async function POST(req: NextRequest) {
       deductionHistory: [],
     };
 
-    if (DEV_IDS.has(user.sub)) {
-      const { id: newId, seq } = nextDevId();
-      const year = new Date().getFullYear();
-      const created: SalaryAdvanceRecord = {
-        id: newId,
-        requestId: `SA-${year}-${String(seq).padStart(4, "0")}`,
-        status: "PENDING",
-        entryTimestamp: new Date().toISOString(),
-        employeeName: payloadMeta.employeeName || "",
-        employeeCode: payloadMeta.employeeCode || "",
-        designation: payloadMeta.designation || "",
-        department: payloadMeta.department || "",
-        currentSalary: Number(payloadMeta.currentSalary || 0),
-        totalAdvanceRequest: Number(payloadMeta.totalAdvanceRequest || 0),
-        repaymentSchedule: payloadMeta.repaymentSchedule || "",
-        initialSlipPhotoUrl: null,
-        totalAdditionalAdvances: Number(payloadMeta.totalAdditionalAdvances || 0),
-        remarks: payloadMeta.remarks || "",
-        deductionHistory: [],
-        totalDeducted: 0,
-        balanceAdvance:
-          Number(payloadMeta.totalAdvanceRequest || 0) +
-          Number(payloadMeta.totalAdditionalAdvances || 0),
-      };
 
-      devStore().unshift(created);
-      return NextResponse.json(created);
-    }
-
-    if (signedUpDevUser) {
-      const { id: newId, seq } = nextDevId();
-      const year = new Date().getFullYear();
-      const totalAdvanceRequest = Number(payloadMeta.totalAdvanceRequest || 0);
-      const totalAdditionalAdvances = Number(payloadMeta.totalAdditionalAdvances || 0);
-      const created: SalaryAdvanceRecord = {
-        id: newId,
-        organizationId: signedUpDevUser.organizationId,
-        requestId: `SA-${year}-${String(seq).padStart(4, "0")}`,
-        status: "PENDING",
-        entryTimestamp: new Date().toISOString(),
-        employeeName: payloadMeta.employeeName || "",
-        employeeCode: payloadMeta.employeeCode || "",
-        designation: payloadMeta.designation || "",
-        department: payloadMeta.department || "",
-        currentSalary: Number(payloadMeta.currentSalary || 0),
-        totalAdvanceRequest,
-        repaymentSchedule: payloadMeta.repaymentSchedule || "",
-        initialSlipPhotoUrl: null,
-        totalAdditionalAdvances,
-        remarks: payloadMeta.remarks || "",
-        deductionHistory: [],
-        totalDeducted: 0,
-        balanceAdvance: totalAdvanceRequest + totalAdditionalAdvances,
-      };
-
-      devStore().unshift(created);
-      return NextResponse.json(created);
-    }
 
     try {
       const dbUser = await prisma.user.findUnique({

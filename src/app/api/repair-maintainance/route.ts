@@ -14,22 +14,10 @@ BigInt.prototype.toJSON = function () {
 
 hydrateDemoModuleGlobals();
 
-const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
+
 const MODULE_KEY = "REPAIR_MAINTAINANCE";
 
-const g = globalThis as any;
-if (!g.__devRepairStore) {
-  g.__devRepairStore = [];
-}
-if (typeof g.__devRepairCounter !== "number") {
-  g.__devRepairCounter = 0;
-}
 
-const devStore = (): any[] => g.__devRepairStore;
-const nextDevId = (): { id: string; seq: number } => {
-  g.__devRepairCounter = (typeof g.__devRepairCounter === "number" ? g.__devRepairCounter : 0) + 1;
-  return { id: String(3000 + g.__devRepairCounter), seq: g.__devRepairCounter };
-};
 
 type RepairMeta = {
   repairRequisitionByName?: string;
@@ -60,9 +48,7 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    if (DEV_IDS.has(user.sub)) {
-      return NextResponse.json(devStore());
-    }
+
 
     const dbUser = await prisma.user.findUnique({ where: { id: BigInt(user.sub) } });
     if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -132,37 +118,7 @@ export async function POST(req: NextRequest) {
       dispatchDate: data.dispatchDate || "",
     };
 
-    if (DEV_IDS.has(user.sub)) {
-      const { id: newId, seq } = nextDevId();
-      const year = new Date().getFullYear();
-      const created = {
-        id: newId,
-        requestId: `RM-${year}-${String(seq).padStart(4, "0")}`,
-        timestamp: new Date().toISOString(),
-        repairRequisitionByName: data.repairRequisitionByName || "Test User",
-        warrantyStatus: payloadMeta.warrantyStatus || "OUT_OF_WARRANTY",
-        priority: data.priority || "NORMAL",
-        siteAddress: data.siteAddress || "",
-        itemDescription: data.itemDescription || "",
-        quantity: Number(data.quantity) || 1,
-        repairVendorName: data.repairVendorName || "",
-        repairStatusBeforePhoto: data.repairStatusBeforePhoto || null,
-        repairStatusAfterPhoto: payloadMeta.repairStatusAfterPhotoUrl || null,
-        expectedReturnDate: payloadMeta.expectedReturnDate || null,
-        repairStatus: payloadMeta.repairStatus || null,
-        returnedByName: payloadMeta.returnedByName || null,
-        dateOfReturn: payloadMeta.dateOfReturn || null,
-        dispatchStatus: data.dispatchStatus || "NOT_DISPATCHED",
-        dispatchItemPhoto: payloadMeta.dispatchItemPhotoUrl || null,
-        paymentProofPhoto: data.paymentProofPhoto || null,
-        billInvoicePhoto: data.billInvoicePhoto || null,
-        dispatchSite: payloadMeta.dispatchSite || null,
-        dispatchByName: payloadMeta.dispatchByName || null,
-        dispatchDate: payloadMeta.dispatchDate || null,
-      };
-      devStore().unshift(created);
-      return NextResponse.json(created);
-    }
+
 
     const dbUser = await prisma.user.findUnique({
       where: { id: BigInt(user.sub) },

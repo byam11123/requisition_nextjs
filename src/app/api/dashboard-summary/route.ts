@@ -21,7 +21,7 @@ BigInt.prototype.toJSON = function () {
 
 hydrateDemoModuleGlobals();
 
-const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
+
 const REPAIR_MODULE_KEY = "REPAIR_MAINTAINANCE";
 const ATTENDANCE_MODULE_KEY = "DRIVER_ATTENDANCE";
 const SALARY_ADVANCE_MODULE_KEY = "SALARY_ADVANCE";
@@ -723,48 +723,6 @@ export async function GET(req: NextRequest) {
   try {
     const query = req.nextUrl.searchParams.get("q")?.trim() || "";
 
-    if (DEV_IDS.has(user.sub)) {
-      const globalStore = globalThis as {
-        __devReqStore?: SummaryRequisitionRow[];
-        __devRepairStore?: SummaryRequisitionRow[];
-        __devAttendanceStore?: SummaryRequisitionRow[];
-        __devSalaryAdvanceStore?: SummaryRequisitionRow[];
-      };
-
-      const requisitions = globalStore.__devReqStore || [];
-      const repairs = globalStore.__devRepairStore || [];
-      const attendance = globalStore.__devAttendanceStore || [];
-      const salaryAdvances = globalStore.__devSalaryAdvanceStore || [];
-      const vehicleFuel = globalStore.__devReqStore?.filter(r => r.requiredFor === VEHICLE_FUEL_MODULE_KEY) || [];
-      const storeItems = await listStoreItems("demo-org-id");
-      
-      const users: SummaryUser[] = [
-        {
-          id: user.sub,
-          fullName: "Demo User",
-          email: "demo@local.test",
-          role: user.role,
-          department: "Operations",
-          isActive: true,
-          lastLogin: new Date(),
-        },
-      ];
-
-      return NextResponse.json(
-        buildSummaryResponse(
-          "Demo Organization",
-          user.role,
-          query,
-          requisitions.filter(r => !r.requiredFor || (r.requiredFor !== REPAIR_MODULE_KEY && r.requiredFor !== ATTENDANCE_MODULE_KEY && r.requiredFor !== SALARY_ADVANCE_MODULE_KEY && r.requiredFor !== VEHICLE_FUEL_MODULE_KEY)),
-          repairs,
-          attendance,
-          salaryAdvances,
-          vehicleFuel as any,
-          storeItems,
-          users,
-        ),
-      );
-    }
 
     try {
       const dbUser = await prisma.user.findUnique({
