@@ -171,11 +171,16 @@ function createDemoSeedState(): StoreOrganizationState {
 }
 
 async function getOrganizationState(organizationId: string): Promise<StoreOrganizationState> {
-  if (organizationId === "demo") {
+  if (organizationId === "demo" || organizationId === "demo-org-id") {
     return createDemoSeedState();
   }
 
   try {
+    // Only try to query DB if the ID is actually a number
+    if (!/^\d+$/.test(organizationId)) {
+      return buildDefaultState();
+    }
+
     const dbConfig = await prisma.storeManagementConfig.findUnique({
       where: { organizationId: BigInt(organizationId) },
     });
@@ -196,6 +201,10 @@ async function saveOrganizationState(organizationId: string, state: StoreOrganiz
   }
 
   try {
+    if (!/^\d+$/.test(organizationId)) {
+      return;
+    }
+
     await prisma.storeManagementConfig.upsert({
       where: { organizationId: BigInt(organizationId) },
       update: { payload: JSON.stringify(state) },
