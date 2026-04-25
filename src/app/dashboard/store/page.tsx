@@ -167,7 +167,7 @@ export default function StoreManagementPage() {
           <StatCard
             key={card.label}
             title={card.label}
-            value={loading ? "..." : card.value.toLocaleString("en-IN")}
+            value={loading ? "..." : (card.value || 0).toLocaleString("en-IN")}
             helper={card.helper}
             icon={card.icon}
             tone={card.tone as any}
