@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/client';
 
 export class RepairRepository {
   private supabase = createClient();
-  private MODULE_KEY = 'REPAIR_MAINTAINANCE';
+  private MODULE_KEY = 'REPAIR_MAINTENANCE';
 
   async getRepairs(organizationId: string) {
     const { data, error } = await this.supabase

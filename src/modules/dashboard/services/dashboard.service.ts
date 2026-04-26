@@ -7,29 +7,31 @@ export class DashboardService {
     const counts = await this.repository.getCounts(organizationId);
     const reqs = (await this.repository.getRecentRequisitions(organizationId, 50)) as any[];
     const repairs = (await this.repository.getRecentRepairs(organizationId, 50)) as any[];
+    const others = (await this.repository.getRecentOtherActivities(organizationId, 50)) as any[];
     
-    const recentActivity = this.buildRecentActivities(reqs, repairs);
-    const notifications = this.buildNotifications(reqs, repairs);
+    const recentActivity = this.buildRecentActivities(reqs, repairs, others);
+    const notifications = this.buildNotifications(reqs, repairs, others);
 
     return {
-      organizationName: "Organization Overview",
+      organizationName: "Unified Dashboard",
       role: "ADMIN",
       summaryCards: {
-        totalRecords: counts.requisitions + counts.repairs,
+        totalRecords: counts.total || (counts.requisitions + counts.repairs + counts.attendance + counts.fuel + counts.salary),
         pendingApprovals: reqs.filter(r => r.approvalStatus === 'PENDING').length + 
-                         repairs.filter(r => r.approvalStatus === 'PENDING').length,
+                         repairs.filter(r => r.approvalStatus === 'PENDING').length +
+                         others.filter(r => r.approvalStatus === 'PENDING').length,
         activeUsers: counts.users,
-        reminders: repairs.length,
+        reminders: others.filter(r => r.requiredFor === 'DRIVER_ATTENDANCE').length,
       },
       notifications,
       recentActivity,
-      trends: this.buildTrendSeries(reqs, repairs),
-      siteBreakdown: this.buildSiteBreakdown([...reqs, ...repairs]),
-      moduleStats: this.buildModuleStats(reqs, repairs),
+      trends: this.buildTrendSeries(reqs, repairs, others),
+      siteBreakdown: this.buildSiteBreakdown([...reqs, ...repairs, ...others]),
+      moduleStats: this.buildModuleStats(counts, reqs, repairs, others),
     };
   }
 
-  private buildRecentActivities(reqs: any[], repairs: any[]) {
+  private buildRecentActivities(reqs: any[], repairs: any[], others: any[]) {
     const items = [
       ...reqs.map(r => ({
         id: `req-${r.id}`,
@@ -48,20 +50,32 @@ export class DashboardService {
         timestamp: r.createdAt,
         href: `/dashboard/repair-maintenance/${r.id}`,
         tone: "emerald" as const,
+      })),
+      ...others.map(r => ({
+        id: `other-${r.id}`,
+        module: r.requiredFor === 'DRIVER_ATTENDANCE' ? 'Attendance' : r.requiredFor === 'SALARY_ADVANCE' ? 'Salary' : 'Fuel',
+        title: r.requestId || "Activity",
+        description: r.materialDescription || "Mobile log",
+        timestamp: r.createdAt,
+        href: r.requiredFor === 'DRIVER_ATTENDANCE' ? `/dashboard/attendance` : r.requiredFor === 'SALARY_ADVANCE' ? `/dashboard/salary-advance` : `/dashboard/vehicle-fuel`,
+        tone: r.requiredFor === 'DRIVER_ATTENDANCE' ? 'sky' : r.requiredFor === 'SALARY_ADVANCE' ? 'purple' : 'orange' as any,
       }))
     ];
 
-    return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 8);
+    return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10);
   }
 
-  private buildNotifications(reqs: any[], repairs: any[]) {
+  private buildNotifications(reqs: any[], repairs: any[], others: any[]) {
     const notifications = [];
-    const pendingReqs = reqs.filter(r => r.approvalStatus === 'PENDING').length;
-    if (pendingReqs > 0) {
+    const pendingTotal = reqs.filter(r => r.approvalStatus === 'PENDING').length + 
+                        repairs.filter(r => r.approvalStatus === 'PENDING').length +
+                        others.filter(r => r.approvalStatus === 'PENDING').length;
+                        
+    if (pendingTotal > 0) {
       notifications.push({
-        id: 'pending-reqs',
-        title: `${pendingReqs} requisitions need attention`,
-        description: "Pending approval requests are stacking up.",
+        id: 'pending-approvals',
+        title: `${pendingTotal} approvals pending`,
+        description: "Standard requisitions and module logs are awaiting review.",
         href: "/dashboard/requisition",
         tone: "amber" as const,
       });
@@ -69,7 +83,7 @@ export class DashboardService {
     return notifications;
   }
 
-  private buildTrendSeries(reqs: any[], repairs: any[]) {
+  private buildTrendSeries(reqs: any[], repairs: any[], others: any[]) {
     const days = 7;
     const series = [];
     const now = new Date();
@@ -82,15 +96,16 @@ export class DashboardService {
 
       const dayReqs = reqs.filter(r => new Date(r.createdAt).toISOString().split('T')[0] === dateStr).length;
       const dayRepairs = repairs.filter(r => new Date(r.createdAt).toISOString().split('T')[0] === dateStr).length;
+      const dayOthers = others.filter(r => new Date(r.createdAt).toISOString().split('T')[0] === dateStr).length;
 
       series.push({
         label,
         requisitions: dayReqs,
-        repair: dayRepairs,
+        repair: dayRepairs + dayOthers,
       });
     }
 
-    // fallback for empty data to make chart look alive
+    // Only use fallback if we literally have 0 data in the last 7 days ACROSS ALL MODULES
     if (series.every(s => s.requisitions === 0 && s.repair === 0)) {
       return series.map((s, idx) => ({
         ...s,
@@ -108,20 +123,40 @@ export class DashboardService {
       const site = r.siteAddress || "Unknown";
       counts.set(site, (counts.get(site) || 0) + 1);
     });
-    return Array.from(counts.entries()).map(([label, value]) => ({ label, value }));
+    return Array.from(counts.entries())
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
   }
 
-  private buildModuleStats(reqs: any[], repairs: any[]) {
+  private buildModuleStats(counts: any, reqs: any[], repairs: any[], others: any[]) {
     return [
       {
         key: "requisitions",
         label: "Requisitions",
         href: "/dashboard/requisition",
         tone: "indigo",
-        total: reqs.length,
+        total: counts.requisitions,
         pending: reqs.filter(r => r.approvalStatus === 'PENDING').length,
         completed: reqs.filter(r => r.paymentStatus === 'DONE').length,
-        attention: 0,
+      },
+      {
+        key: "repairs",
+        label: "Repairs",
+        href: "/dashboard/repair-maintenance",
+        tone: "emerald",
+        total: counts.repairs,
+        pending: repairs.filter(r => r.approvalStatus === 'PENDING').length,
+        completed: repairs.filter(r => r.dispatchStatus === 'DELIVERED').length,
+      },
+      {
+        key: "attendance",
+        label: "Attendance",
+        href: "/dashboard/attendance",
+        tone: "sky",
+        total: counts.attendance,
+        pending: others.filter(r => r.requiredFor === 'DRIVER_ATTENDANCE' && r.approvalStatus === 'PENDING').length,
+        completed: 0
       }
     ];
   }

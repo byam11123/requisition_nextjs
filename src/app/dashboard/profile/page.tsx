@@ -311,12 +311,12 @@ export default function ProfilePage() {
 
       <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-5 sm:p-6 lg:p-8">
         <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center">
-          <div className="relative w-fit mx-auto sm:mx-0">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-slate-800 text-3xl font-bold text-indigo-400">
+          <div className="relative mx-auto w-fit sm:mx-0">
+            <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/10 bg-indigo-500/10 text-4xl font-bold text-indigo-400 shadow-inner sm:h-20 sm:w-20 sm:text-3xl">
               {user.fullName?.[0]?.toUpperCase()}
             </div>
-            <label className="absolute -bottom-2 -right-2 cursor-pointer rounded-xl border border-white/10 bg-slate-700 p-1.5 hover:bg-slate-600">
-              <Camera size={14} className="text-slate-300" />
+            <label className="absolute -bottom-1 -right-1 cursor-pointer rounded-2xl border border-white/10 bg-slate-800 p-2 shadow-lg transition-transform hover:scale-105 hover:bg-slate-700 active:scale-95 sm:-bottom-2 sm:-right-2">
+              <Camera size={16} className="text-slate-300" />
               <input type="file" className="hidden" accept="image/*" />
             </label>
           </div>
@@ -367,7 +367,7 @@ export default function ProfilePage() {
           <InfoRow icon={Briefcase} label="Role" value={user.role} />
           <InfoRow icon={Building2} label="Department" value={user.department} />
           <InfoRow icon={Briefcase} label="Designation" value={user.designation} />
-          <InfoRow icon={Building2} label="Organization" value={user.organization?.name || user.organizationName || org?.name} />
+          <InfoRow icon={Building2} label="Organization" value={org?.name || user.organization?.name || user.organizationName} />
         </div>
 
         {!isAdmin && (

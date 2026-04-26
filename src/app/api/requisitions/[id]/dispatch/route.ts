@@ -38,7 +38,7 @@ function isInWarrantyRepairRecord(record: DevRequisitionRecord | null | undefine
     return true;
   }
 
-  if (String(record.requiredFor || '').toUpperCase() !== 'REPAIR_MAINTAINANCE') {
+  if (String(record.requiredFor || '').toUpperCase() !== 'REPAIR_MAINTENANCE') {
     return false;
   }
 

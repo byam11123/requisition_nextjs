@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -31,9 +31,14 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function ActivityTrendChart({ data }: ChartProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return <div className="h-full w-full bg-[var(--app-panel)]/20 animate-pulse rounded-2xl" />;
+
   return (
-    <div className="h-full w-full py-2">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-full w-full py-2 min-w-0">
+      <ResponsiveContainer width="100%" height="100%" debounce={10}>
         <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1">
@@ -86,11 +91,16 @@ export function ActivityTrendChart({ data }: ChartProps) {
 }
 
 export function ModuleDistributionChart({ data }: ChartProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const COLORS = ['var(--app-accent)', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
+  if (!mounted) return <div className="h-full w-full flex items-center justify-center"><div className="w-32 h-32 rounded-full border-4 border-dashed border-[var(--app-border)] animate-spin" /></div>;
+
   return (
-    <div className="h-full w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-full w-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%" debounce={10}>
         <PieChart>
           <Pie
             data={data}

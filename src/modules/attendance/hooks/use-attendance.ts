@@ -31,12 +31,14 @@ export function useAttendance() {
   }, [user]);
 
   const filteredRecords = useMemo(() => {
-    return records.filter(r => {
-      const q = searchQuery.toLowerCase();
-      const matchSearch = !q || r.requestId.toLowerCase().includes(q) || r.driverName.toLowerCase().includes(q);
-      const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
+    return records
+      .filter(r => {
+        const q = searchQuery.toLowerCase();
+        const matchSearch = !q || r.requestId.toLowerCase().includes(q) || r.driverName.toLowerCase().includes(q);
+        const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
+        return matchSearch && matchStatus;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [records, searchQuery, statusFilter]);
 
   const stats = useMemo(() => ({

@@ -1,9 +1,5 @@
 "use client";
 import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
-
-
-
-
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -51,7 +47,6 @@ export default function DashboardPage() {
   const [deleteModal, setDeleteModal] = useState({ isOpen: false });
   const [dispatchModal, setDispatchModal] = useState({ isOpen: false, id: '' });
 
-
   const fetchRequisitions = async () => {
     try {
       const token = useAuthStore.getState().token;
@@ -77,7 +72,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (pathname === '/dashboard') {
-      router.replace('/dashboard/requisition');
+      router.replace('/dashboard/overview');
     }
   }, [pathname, router]);
 
@@ -469,9 +464,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-
-
-
-
-

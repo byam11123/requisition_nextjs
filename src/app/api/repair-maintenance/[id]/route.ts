@@ -15,7 +15,7 @@ BigInt.prototype.toJSON = function () {
 hydrateDemoModuleGlobals();
 
 const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
-const MODULE_KEY = "REPAIR_MAINTAINANCE";
+const MODULE_KEY = "REPAIR_MAINTENANCE";
 const g = globalThis as any;
 
 type RepairMeta = {

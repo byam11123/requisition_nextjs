@@ -32,12 +32,14 @@ export function useStore() {
   }, [user]);
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
-      const matchType = typeFilter === 'ALL' || item.itemType === typeFilter;
-      const q = searchQuery.toLowerCase();
-      const matchSearch = !q || item.name.toLowerCase().includes(q) || item.itemCode.toLowerCase().includes(q);
-      return matchType && matchSearch;
-    });
+    return items
+      .filter(item => {
+        const matchType = typeFilter === 'ALL' || item.itemType === typeFilter;
+        const q = searchQuery.toLowerCase();
+        const matchSearch = !q || item.name.toLowerCase().includes(q) || item.itemCode.toLowerCase().includes(q);
+        return matchType && matchSearch;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [items, searchQuery, typeFilter]);
 
   return {

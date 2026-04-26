@@ -44,7 +44,7 @@ export default function OverviewDashboardPage() {
                   <span className="w-2 h-2 rounded-full bg-[var(--app-accent)] shadow-[0_0_8px_var(--app-accent)]" /> Requisitions
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" /> Repairs
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" /> Repairs & Others
                 </div>
               </div>
             </div>
@@ -61,11 +61,15 @@ export default function OverviewDashboardPage() {
             <h2 className="text-lg font-bold text-[var(--app-text)] mb-1">Module Distribution</h2>
             <p className="text-xs text-[var(--app-muted)] mb-6">Resource allocation by department.</p>
             <div className="h-[300px]">
-              {summary && <ModuleDistributionChart data={[
-                { label: 'Requisitions', value: summary.summaryCards.totalRecords - summary.summaryCards.reminders },
-                { label: 'Repairs', value: summary.summaryCards.reminders || 2 },
-                { label: 'Fuel/Misc', value: 3 },
-              ]} />}
+              {summary && <ModuleDistributionChart data={
+                summary.moduleStats?.map((s: any) => ({
+                  label: s.label,
+                  value: s.total
+                })) || [
+                  { label: 'Requisitions', value: 10 },
+                  { label: 'Repairs', value: 5 }
+                ]
+              } />}
             </div>
           </div>
 

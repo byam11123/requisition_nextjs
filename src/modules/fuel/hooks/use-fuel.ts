@@ -29,12 +29,14 @@ export function useFuel() {
   }, [user]);
 
   const filteredRequests = useMemo(() => {
-    return requests.filter(r => {
-      const q = searchQuery.toLowerCase();
-      const matchSearch = !q || r.requestId.toLowerCase().includes(q) || r.vehicleType.toLowerCase().includes(q);
-      const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
+    return requests
+      .filter(r => {
+        const q = searchQuery.toLowerCase();
+        const matchSearch = !q || r.requestId.toLowerCase().includes(q) || r.vehicleType.toLowerCase().includes(q);
+        const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
+        return matchSearch && matchStatus;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [requests, searchQuery, statusFilter]);
 
   const stats = useMemo(() => ({

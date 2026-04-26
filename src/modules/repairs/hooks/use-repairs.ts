@@ -29,18 +29,20 @@ export function useRepairs() {
   }, [user]);
 
   const filteredRepairs = useMemo(() => {
-    return repairs.filter(r => {
-      const q = searchQuery.toLowerCase();
-      const matchSearch = !q || r.requestId?.toLowerCase().includes(q) || r.itemDescription?.toLowerCase().includes(q);
-      
-      let matchStatus = true;
-      if (statusFilter === 'PENDING') matchStatus = r.approvalStatus === 'PENDING';
-      else if (statusFilter === 'APPROVED') matchStatus = r.approvalStatus === 'APPROVED';
-      else if (statusFilter === 'IN_TRANSIT') matchStatus = r.dispatchStatus === 'DISPATCHED';
-      else if (statusFilter === 'COMPLETED') matchStatus = r.dispatchStatus === 'DELIVERED';
-      
-      return matchSearch && matchStatus;
-    });
+    return repairs
+      .filter(r => {
+        const q = searchQuery.toLowerCase();
+        const matchSearch = !q || r.requestId?.toLowerCase().includes(q) || r.itemDescription?.toLowerCase().includes(q);
+        
+        let matchStatus = true;
+        if (statusFilter === 'PENDING') matchStatus = r.approvalStatus === 'PENDING';
+        else if (statusFilter === 'APPROVED') matchStatus = r.approvalStatus === 'APPROVED';
+        else if (statusFilter === 'IN_TRANSIT') matchStatus = r.dispatchStatus === 'DISPATCHED';
+        else if (statusFilter === 'COMPLETED') matchStatus = r.dispatchStatus === 'DELIVERED';
+        
+        return matchSearch && matchStatus;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [repairs, searchQuery, statusFilter]);
 
   const stats = useMemo(() => ({
