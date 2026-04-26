@@ -20,7 +20,7 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const item = getStoreItem(scope.organizationId, id);
+    const item = await getStoreItem(scope.organizationId, id);
     if (!item) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

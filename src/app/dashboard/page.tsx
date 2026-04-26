@@ -1,4 +1,8 @@
 "use client";
+import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
+
+
+
 
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -50,7 +54,7 @@ export default function DashboardPage() {
 
   const fetchRequisitions = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = useAuthStore.getState().token;
       const res = await fetch('/api/requisitions', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setRequisitions(await res.json());
     } catch (e) { console.error(e); }
@@ -59,7 +63,7 @@ export default function DashboardPage() {
 
   const fetchWorkflowConfig = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = useAuthStore.getState().token;
       const res = await fetch('/api/workflow-config/requisition', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -81,7 +85,7 @@ export default function DashboardPage() {
     if (pathname === '/dashboard') {
       return;
     }
-    const u = localStorage.getItem('user');
+    const u = JSON.stringify(useAuthStore.getState().user);
     if (u) {
       startTransition(() => {
         setUser(JSON.parse(u));
@@ -136,7 +140,7 @@ export default function DashboardPage() {
   const handleBulkDelete = async () => {
     setDeleting(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = useAuthStore.getState().token;
       await fetch('/api/requisitions/bulk-delete', {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -157,7 +161,7 @@ export default function DashboardPage() {
   }
 
   const handleDispatch = async (id: string) => {
-    const token = localStorage.getItem('token');
+    const token = useAuthStore.getState().token;
     await fetch(`/api/requisitions/${id}/dispatch`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
     fetchRequisitions();
     setDispatchModal({ isOpen: false, id: '' });
@@ -286,7 +290,7 @@ export default function DashboardPage() {
             onExportPdf={() => handleExport('pdf')}
           />
           {(user?.role === 'PURCHASER' || user?.role === 'ADMIN') && (
-            <Link id="btn-new-req" href="/dashboard/create"
+            <Link id="btn-new-req" href="/dashboard/requisition/create"
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-600/20">
               <Plus size={16} /> New Requisition
             </Link>
@@ -415,7 +419,7 @@ export default function DashboardPage() {
                         className="rounded border-[var(--app-border-strong)] bg-[var(--app-bg-secondary)]" />
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      <Link href={`/dashboard/req/${id}`}
+                      <Link href={`/dashboard/requisition/${id}`}
                         className="font-semibold text-[var(--app-accent)] hover:text-[var(--app-accent-strong)] hover:underline underline-offset-2 transition-colors">
                         {row.requestId || 'DRAFT'}
                       </Link>
@@ -435,10 +439,10 @@ export default function DashboardPage() {
                     <td className="px-4 py-3"><StatusChip tone={getDispatchTone(row.dispatchStatus)}>{row.dispatchStatus}</StatusChip></td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <ActionIconButton id={`btn-view-${id}`} href={`/dashboard/req/${id}`}
+                        <ActionIconButton id={`btn-view-${id}`} href={`/dashboard/requisition/${id}`}
                           icon={Eye} label="View requisition" tone="indigo" size="sm" />
                         {canEdit && (
-                          <ActionIconButton id={`btn-edit-${id}`} href={`/dashboard/edit/${id}`}
+                          <ActionIconButton id={`btn-edit-${id}`} href={`/dashboard/requisition/edit/${id}`}
                             icon={Edit} label="Edit requisition" tone="sky" size="sm" />
                         )}
                         {canRunRequisitionWorkflowStep({
@@ -465,3 +469,9 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+
+
+
+
+

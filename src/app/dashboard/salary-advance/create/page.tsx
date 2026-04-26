@@ -1,4 +1,8 @@
 "use client";
+import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
+
+
+
 
 import Image from "next/image";
 import Link from "next/link";
@@ -70,7 +74,7 @@ export default function CreateSalaryAdvancePage() {
     };
 
   const uploadInitialSlipPhoto = async (file: File, requisitionId: string) => {
-    const token = localStorage.getItem("token");
+    const token = useAuthStore.getState().token;
     const formData = new FormData();
     formData.append("file", file);
     formData.append("requisitionId", requisitionId);
@@ -119,7 +123,7 @@ export default function CreateSalaryAdvancePage() {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const response = await fetch("/api/salary-advance", {
         method: "POST",
         headers: {
@@ -360,3 +364,8 @@ export default function CreateSalaryAdvancePage() {
     </div>
   );
 }
+
+
+
+
+

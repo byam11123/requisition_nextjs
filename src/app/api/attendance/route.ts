@@ -149,16 +149,10 @@ export async function GET(req: NextRequest) {
 
 
     try {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: BigInt(user.sub) },
-      });
-      if (!dbUser) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
-      }
-
+      const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
       const rows = await prisma.requisition.findMany({
         where: {
-          organizationId: dbUser.organizationId,
+          organizationId: organizationId as any,
           requiredFor: MODULE_KEY,
         },
         include: {
@@ -205,18 +199,13 @@ export async function POST(req: NextRequest) {
 
 
     try {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: BigInt(user.sub) },
-        include: { organization: true },
-      });
-      if (!dbUser) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
-      }
+      const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
+      const userId = user.sub === 'demo' ? 'demo' : BigInt(user.sub);
 
       const nextId =
         (await prisma.requisition.count({
           where: {
-            organizationId: dbUser.organizationId,
+            organizationId: organizationId as any,
             requiredFor: MODULE_KEY,
           },
         })) + 1;
@@ -228,8 +217,8 @@ export async function POST(req: NextRequest) {
 
       const created = await prisma.requisition.create({
         data: {
-          organizationId: dbUser.organizationId,
-          createdById: BigInt(user.sub),
+          organizationId: organizationId as any,
+          createdById: userId as any,
           requestId,
           status: "SUBMITTED",
           approvalStatus: "PENDING",
@@ -264,4 +253,35 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+export async function DELETE(req: NextRequest) {
+  const user = getUserFromRequest(req);
+  if (!user || user.role !== 'ADMIN') {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  try {
+    const { ids } = await req.json();
+    if (!Array.isArray(ids)) {
+      return NextResponse.json({ error: "Invalid IDs" }, { status: 400 });
+    }
+
+    const prismaIds = ids.map(id => BigInt(id));
+    const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
+
+    await prisma.requisition.deleteMany({
+      where: {
+        id: { in: prismaIds as any },
+        organizationId: organizationId as any,
+        requiredFor: MODULE_KEY,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Attendance DELETE error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
+}

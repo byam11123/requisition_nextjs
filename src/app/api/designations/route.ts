@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
   const roleContext = await getEffectiveRoleContext({
     userId: user.sub,
     baseRole: user.role,
+    organizationId: user.organizationId,
   });
   if (!roleContext) {
     return NextResponse.json({ error: "Role context unavailable" }, { status: 404 });
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
   const roleContext = await getEffectiveRoleContext({
     userId: user.sub,
     baseRole: user.role,
+    organizationId: user.organizationId,
   });
   if (!roleContext) {
     return NextResponse.json({ error: "Role context unavailable" }, { status: 404 });

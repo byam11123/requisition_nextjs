@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Update repair-maintainance dev store if applicable ────────────────
+    // ── Update repair-maintenance dev store if applicable ────────────────
     const repairField = REPAIR_CATEGORY_FIELD[category];
     if (g.__devRepairStore && repairField) {
       const repairStore = g.__devRepairStore;

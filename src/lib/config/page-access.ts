@@ -42,18 +42,16 @@ const DASHBOARD_PATH_RULES: DashboardPathRule[] = [
   { key: "store", href: "/dashboard/store" },
   { key: "workflow", href: "/dashboard/workflow" },
   { key: "users", href: "/dashboard/users" },
-  { key: "newRepairRequest", href: "/dashboard/repair-maintainance/create" },
-  { key: "repair", href: "/dashboard/repair-maintainance" },
+  { key: "newRepairRequest", href: "/dashboard/repair-maintenance/create" },
+  { key: "repair", href: "/dashboard/repair-maintenance" },
   { key: "newVehicleFuel", href: "/dashboard/vehicle-fuel/create" },
   { key: "vehicleFuel", href: "/dashboard/vehicle-fuel" },
   { key: "newAttendance", href: "/dashboard/attendance/create" },
   { key: "attendance", href: "/dashboard/attendance" },
   { key: "newSalaryAdvance", href: "/dashboard/salary-advance/create" },
   { key: "salaryAdvance", href: "/dashboard/salary-advance" },
-  { key: "newRequisition", href: "/dashboard/create" },
+  { key: "newRequisition", href: "/dashboard/requisition/create" },
   { key: "requisition", href: "/dashboard/requisition" },
-  { key: "requisition", href: "/dashboard/req" },
-  { key: "requisition", href: "/dashboard/edit" },
   { key: "profile", href: "/dashboard/profile" },
   { key: "requisition", href: "/dashboard" },
 ];
@@ -104,7 +102,7 @@ export const DASHBOARD_PAGE_OPTIONS: DashboardPageOption[] = [
   {
     key: "repair",
     label: "Repair & Maintenance",
-    href: "/dashboard/repair-maintainance",
+    href: "/dashboard/repair-maintenance",
     description: "Repair register and repair detail pages.",
   },
   {
@@ -146,13 +144,13 @@ export const DASHBOARD_PAGE_OPTIONS: DashboardPageOption[] = [
   {
     key: "newRequisition",
     label: "New Requisition",
-    href: "/dashboard/create",
+    href: "/dashboard/requisition/create",
     description: "Create a fresh requisition request.",
   },
   {
     key: "newRepairRequest",
     label: "New Repair Request",
-    href: "/dashboard/repair-maintainance/create",
+    href: "/dashboard/repair-maintenance/create",
     description: "Create a new repair or breakdown request.",
   },
   {

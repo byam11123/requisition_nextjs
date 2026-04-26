@@ -12,36 +12,9 @@ import { canAccessDashboardPath, getDefaultDashboardPath } from '@/lib/config/pa
 import UserNav from './components/layout/user-nav';
 import { ThemeSwitcher } from '@/components/theme';
 import { APP_THEMES } from '@/components/theme/theme-config';
+import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
 
 
-
-type DashboardUser = {
-  role?: string;
-  baseRole?: string;
-  customRoleKey?: string;
-  customRoleName?: string;
-  rolePageAccess?: string[] | null;
-  fullName?: string;
-  email?: string;
-  pageAccess?: string[] | null;
-};
-
-function getStoredUser() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const userStr = window.localStorage.getItem('user');
-  if (!userStr) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(userStr) as DashboardUser;
-  } catch {
-    return null;
-  }
-}
 
 type ThemeOptionKey = (typeof APP_THEMES)[number]["key"];
 
@@ -49,27 +22,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-   const [user, setUser] = useState<DashboardUser | null>(null);
-   const [authReady, setAuthReady] = useState(false);
-
+  const { user, token, clearAuth, _hasHydrated } = useAuthStore();
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const token = localStorage.getItem('token');
-      const storedUser = getStoredUser();
+    if (!_hasHydrated) return;
 
-      if (!token || !storedUser) {
-        setAuthReady(true);
-        router.push('/');
-        return;
-      }
-
-      setUser(storedUser);
+    if (!token || !user) {
+      router.push('/');
+    } else {
       setAuthReady(true);
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [router]);
+    }
+  }, [_hasHydrated, token, user, router]);
 
   useEffect(() => {
     const syncSidebarForViewport = () => {
@@ -93,12 +57,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const canAccessCurrentPage = canAccessDashboardPath(pathname, user.role, user.pageAccess, user.rolePageAccess);
-  const fallbackHref = getDefaultDashboardPath(user.role, user.pageAccess, user.rolePageAccess);
+  const canAccessCurrentPage = canAccessDashboardPath(
+    pathname, 
+    user.role, 
+    (user as any).page_access_override, 
+    (user as any).role_page_access
+  );
+  const fallbackHref = getDefaultDashboardPath(
+    user.role, 
+    (user as any).page_access_override, 
+    (user as any).role_page_access
+  );
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearAuth();
     router.push('/');
   };
 
@@ -107,9 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       pathname === href ||
       (href === '/dashboard/requisition'
         ? pathname === '/dashboard' ||
-          pathname.startsWith('/dashboard/requisition') ||
-          pathname.startsWith('/dashboard/req') ||
-          pathname.startsWith('/dashboard/edit')
+          pathname.startsWith('/dashboard/requisition')
         : href !== '/dashboard' && pathname.startsWith(href));
     return (
       <Link
@@ -227,7 +197,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {canAccessDashboardPath('/dashboard/store', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/store', 'Store Management', Boxes)}
             {canAccessDashboardPath('/dashboard/workflow', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/workflow', 'Workflow Config', Settings2)}
             {canAccessDashboardPath('/dashboard/requisition', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/requisition', 'Requisition', ReceiptText)}
-      {canAccessDashboardPath('/dashboard/repair-maintainance', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/repair-maintainance', 'Repair & Maintenance', Wrench)}
+      {canAccessDashboardPath('/dashboard/repair-maintenance', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/repair-maintenance', 'Repair & Maintenance', Wrench)}
             {canAccessDashboardPath('/dashboard/vehicle-fuel', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/vehicle-fuel', 'Vehicle Daily Fuel', Fuel)}
             {canAccessDashboardPath('/dashboard/attendance', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/attendance', 'Attendance', CalendarCheck2)}
             {canAccessDashboardPath('/dashboard/salary-advance', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/salary-advance', 'Salary Advance', HandCoins)}
@@ -235,9 +205,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {canAccessDashboardPath('/dashboard/profile', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/profile', 'Profile', User)}
           </div>
 
-          {(canAccessDashboardPath('/dashboard/create', user.role, user.pageAccess, user.rolePageAccess) ||
+          {(canAccessDashboardPath('/dashboard/requisition/create', user.role, user.pageAccess, user.rolePageAccess) ||
             canAccessDashboardPath('/dashboard/store/items/create', user.role, user.pageAccess, user.rolePageAccess) ||
-            canAccessDashboardPath('/dashboard/repair-maintainance/create', user.role, user.pageAccess, user.rolePageAccess) ||
+            canAccessDashboardPath('/dashboard/repair-maintenance/create', user.role, user.pageAccess, user.rolePageAccess) ||
             canAccessDashboardPath('/dashboard/vehicle-fuel/create', user.role, user.pageAccess, user.rolePageAccess) ||
             canAccessDashboardPath('/dashboard/attendance/create', user.role, user.pageAccess, user.rolePageAccess) ||
             canAccessDashboardPath('/dashboard/salary-advance/create', user.role, user.pageAccess, user.rolePageAccess)) && (
@@ -245,9 +215,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="mt-6" />
               {sectionLabel('Quick Create')}
               <div className="space-y-2">
-                {canAccessDashboardPath('/dashboard/create', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/create', 'New Requisition', FilePlus)}
+                {canAccessDashboardPath('/dashboard/requisition/create', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/requisition/create', 'New Requisition', FilePlus)}
                 {canAccessDashboardPath('/dashboard/store/items/create', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/store/items/create', 'New Store Item', FilePlus)}
-                {canAccessDashboardPath('/dashboard/repair-maintainance/create', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/repair-maintainance/create', 'New Repair Request', FilePlus)}
+                {canAccessDashboardPath('/dashboard/repair-maintenance/create', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/repair-maintenance/create', 'New Repair Request', FilePlus)}
                 {canAccessDashboardPath('/dashboard/vehicle-fuel/create', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/vehicle-fuel/create', 'New Vehicle Fuel', FilePlus)}
                 {canAccessDashboardPath('/dashboard/attendance/create', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/attendance/create', 'New Attendance', FilePlus)}
                 {canAccessDashboardPath('/dashboard/salary-advance/create', user.role, user.pageAccess, user.rolePageAccess) && navItem('/dashboard/salary-advance/create', 'New Salary Advance', FilePlus)}
@@ -300,3 +270,4 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </div>
   );
 }
+

@@ -3,12 +3,12 @@
 import { LogOut } from "lucide-react";
 
 type DashboardUser = {
-  role?: string;
-  baseRole?: string;
-  customRoleKey?: string;
-  customRoleName?: string;
-  fullName?: string;
-  email?: string;
+  role?: string | null;
+  baseRole?: string | null;
+  customRoleKey?: string | null;
+  customRoleName?: string | null;
+  fullName?: string | null;
+  email?: string | null;
 };
 
 type UserNavProps = {
@@ -29,15 +29,15 @@ export default function UserNav({
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--app-border-strong)] bg-[var(--app-surface-strong)]">
               <span className="text-sm font-semibold text-[var(--app-muted)]">
-                {user.fullName?.[0] || user.email?.[0]?.toUpperCase()}
+                {user.fullName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
               </span>
             </div>
             <div className="min-w-0 overflow-hidden">
               <p className="truncate text-sm font-medium text-[var(--app-text)]">
-                {user.fullName || user.email}
+                {user.fullName || user.email || 'User'}
               </p>
               <p className="truncate text-xs uppercase tracking-[0.2em] text-[var(--app-muted)]">
-                {user.customRoleName || user.role}
+                {user.customRoleName || user.role || 'GUEST'}
               </p>
             </div>
           </div>
@@ -59,7 +59,7 @@ export default function UserNav({
     <div className="flex flex-col items-center gap-2">
       <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--app-border-strong)] bg-[var(--app-surface-strong)]">
         <span className="text-sm font-semibold text-[var(--app-muted)]">
-          {user.fullName?.[0] || user.email?.[0]?.toUpperCase()}
+          {user.fullName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
         </span>
       </div>
       <button

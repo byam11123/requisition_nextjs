@@ -5,14 +5,17 @@ import {
   type ContactDefinition,
 } from "@/lib/stores/contact-store";
 
-export async function GET(request: Request) {
+import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest } from "next/server";
+
+export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Missing authorization" }, { status: 401 });
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const contacts = await getContactsForOrganization("demo");
+    const contacts = await getContactsForOrganization(user.organizationId);
     return NextResponse.json(contacts);
   } catch (error) {
     console.error("GET Contacts Error:", error);
@@ -23,11 +26,11 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Missing authorization" }, { status: 401 });
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const payload = await request.json();
@@ -48,7 +51,7 @@ export async function PUT(request: Request) {
       }
     }
 
-    const updated = await saveContactsForOrganization("demo", payload as ContactDefinition[]);
+    const updated = await saveContactsForOrganization(user.organizationId, payload as ContactDefinition[]);
     return NextResponse.json(updated);
   } catch (error) {
     console.error("PUT Contacts Error:", error);

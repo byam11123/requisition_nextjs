@@ -1,4 +1,8 @@
 "use client";
+import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
+
+
+
 
 import { startTransition, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -24,7 +28,7 @@ type SessionUser = {
   role?: string;
   department?: string;
   designation?: string;
-  organizationName?: string;
+  organizationName?: string; organization?: { name: string; };
 };
 
 type OrganizationProfile = {
@@ -146,7 +150,7 @@ export default function ProfilePage() {
 
   const loadOrg = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch("/api/organization", { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) return;
       const data = (await res.json()) as OrganizationProfile;
@@ -164,7 +168,7 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    const rawUser = localStorage.getItem("user");
+    const rawUser = JSON.stringify(useAuthStore.getState().user);
     if (!rawUser) {
       router.push("/");
       return;
@@ -180,12 +184,10 @@ export default function ProfilePage() {
       });
     });
 
-    if (parsed.role === "ADMIN") {
-      const run = async () => {
-        await loadOrg();
-      };
-      void run();
-    }
+    const run = async () => {
+      await loadOrg();
+    };
+    void run();
   }, [router]);
 
   const handleEditProfile = async (event: FormEvent<HTMLFormElement>) => {
@@ -196,7 +198,7 @@ export default function ProfilePage() {
     setError("");
     setSuccess("");
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: {
@@ -225,7 +227,7 @@ export default function ProfilePage() {
     setError("");
     setSuccess("");
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch("/api/organization", {
         method: "PUT",
         headers: {
@@ -256,7 +258,7 @@ export default function ProfilePage() {
     setError("");
     setSuccess("");
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch("/api/users/change-password", {
         method: "POST",
         headers: {
@@ -309,7 +311,7 @@ export default function ProfilePage() {
 
       <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-5 sm:p-6 lg:p-8">
         <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center">
-          <div className="relative">
+          <div className="relative w-fit mx-auto sm:mx-0">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-slate-800 text-3xl font-bold text-indigo-400">
               {user.fullName?.[0]?.toUpperCase()}
             </div>
@@ -319,8 +321,8 @@ export default function ProfilePage() {
             </label>
           </div>
 
-          <div className="flex-1">
-            <div className="mb-1 flex flex-wrap items-center gap-3">
+          <div className="flex-1 text-center sm:text-left">
+            <div className="mb-1 flex flex-wrap items-center justify-center sm:justify-start gap-3">
               <h2 className="text-xl font-semibold text-slate-100">{user.fullName}</h2>
               <span
                 className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
@@ -339,7 +341,7 @@ export default function ProfilePage() {
             <p className="text-sm text-slate-400">{user.email}</p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
             {isAdmin && (
               <button
                 id="btn-edit-profile"
@@ -365,7 +367,7 @@ export default function ProfilePage() {
           <InfoRow icon={Briefcase} label="Role" value={user.role} />
           <InfoRow icon={Building2} label="Department" value={user.department} />
           <InfoRow icon={Briefcase} label="Designation" value={user.designation} />
-          <InfoRow icon={Building2} label="Organization" value={user.organizationName} />
+          <InfoRow icon={Building2} label="Organization" value={user.organization?.name || user.organizationName || org?.name} />
         </div>
 
         {!isAdmin && (
@@ -482,3 +484,10 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+
+
+
+
+
+

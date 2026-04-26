@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-
 import { getUserFromRequest } from "@/lib/auth";
-import {
-  DEFAULT_REQUISITION_WORKFLOW_CONFIG,
-  normalizeRequisitionWorkflowConfig,
-} from "@/lib/config/requisition-workflow-config";
-import {
-  getRequisitionWorkflowOrganizationScope,
-  getRequisitionWorkflowConfig,
-  saveRequisitionWorkflowConfig,
-} from "@/lib/stores/requisition-workflow-store";
+import { WorkflowService } from "@/modules/approval/services/workflow.service";
+
+const workflowService = new WorkflowService();
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -18,16 +11,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const organizationScope = await getRequisitionWorkflowOrganizationScope(user.sub);
-    if (!organizationScope) {
-      return NextResponse.json(DEFAULT_REQUISITION_WORKFLOW_CONFIG);
-    }
-
-    const config = await getRequisitionWorkflowConfig(organizationScope);
+    const config = await workflowService.getRequisitionConfig(user.organizationId || "1");
     return NextResponse.json(config);
-  } catch (error) {
-    console.error("Workflow config GET error:", error);
-    return NextResponse.json(DEFAULT_REQUISITION_WORKFLOW_CONFIG);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -39,21 +26,9 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const normalized = normalizeRequisitionWorkflowConfig(body);
-    if (!normalized) {
-      return NextResponse.json({ error: "Invalid workflow configuration" }, { status: 400 });
-    }
-
-    const organizationScope = await getRequisitionWorkflowOrganizationScope(user.sub);
-    if (!organizationScope) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
-    }
-
-    const saved = await saveRequisitionWorkflowConfig(organizationScope, normalized);
+    const saved = await workflowService.saveRequisitionConfig(user.organizationId || "1", body);
     return NextResponse.json(saved);
-  } catch (error) {
-    console.error("Workflow config PUT error:", error);
-    return NextResponse.json({ error: "Unable to save workflow configuration" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

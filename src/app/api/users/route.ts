@@ -60,15 +60,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: BigInt(user.sub) },
-    });
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
 
     const users = await prisma.user.findMany({
-      where: { organizationId: dbUser.organizationId },
+      where: { organizationId: organizationId as any },
       select: {
         id: true,
         organizationId: true,
@@ -208,7 +203,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const roleContext = await getEffectiveRoleContext({ userId: user.sub, baseRole: user.role });
+  const roleContext = await getEffectiveRoleContext({ 
+    userId: user.sub, 
+    baseRole: user.role,
+    organizationId: user.organizationId
+  });
   if (!roleContext) {
     return NextResponse.json({ error: "Role context unavailable" }, { status: 404 });
   }

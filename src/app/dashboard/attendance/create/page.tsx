@@ -1,4 +1,8 @@
 "use client";
+import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
+
+
+
 
 import Image from "next/image";
 import Link from "next/link";
@@ -29,7 +33,7 @@ function getStoredAdminName() {
     return "";
   }
 
-  const rawUser = window.localStorage.getItem("user");
+  const rawUser = window.JSON.stringify(useAuthStore.getState().user);
   if (!rawUser) {
     return "";
   }
@@ -82,7 +86,7 @@ export default function CreateAttendancePage() {
     };
 
   const uploadGeoTagPhoto = async (file: File, requisitionId: string) => {
-    const token = localStorage.getItem("token");
+    const token = useAuthStore.getState().token;
     const formData = new FormData();
     formData.append("file", file);
     formData.append("requisitionId", requisitionId);
@@ -139,7 +143,7 @@ export default function CreateAttendancePage() {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const response = await fetch("/api/attendance", {
         method: "POST",
         headers: {
@@ -381,3 +385,9 @@ export default function CreateAttendancePage() {
     </div>
   );
 }
+
+
+
+
+
+

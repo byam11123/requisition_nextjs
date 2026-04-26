@@ -284,3 +284,36 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  const user = getUserFromRequest(req);
+  if (!user || user.role !== 'ADMIN') {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { ids } = await req.json();
+    if (!Array.isArray(ids)) {
+      return NextResponse.json({ error: "Invalid IDs" }, { status: 400 });
+    }
+
+    const prismaIds = ids.map(id => BigInt(id));
+    const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
+
+    await prisma.requisition.deleteMany({
+      where: {
+        id: { in: prismaIds as any },
+        organizationId: organizationId as any,
+        requiredFor: MODULE_KEY,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Salary Advance DELETE error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
+}
+

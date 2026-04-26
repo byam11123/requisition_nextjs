@@ -3,7 +3,11 @@ import { prisma } from "@/lib/prisma";
 
 const DEV_IDS = new Set(["9999", "9998", "9997", "9996"]);
 
-export async function resolveStoreOrganizationScope(userId: string) {
+export async function resolveStoreOrganizationScope(userId: string, organizationId?: string) {
+  if (organizationId) {
+    return { organizationId, source: "jwt" as const };
+  }
+
   if (DEV_IDS.has(userId)) {
     return { organizationId: "demo", source: "demo" as const };
   }
@@ -17,7 +21,7 @@ export async function resolveStoreOrganizationScope(userId: string) {
   }
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: BigInt(userId) },
+    where: { id: userId === 'demo' ? 0n : BigInt(userId) },
   });
   if (!dbUser) {
     return null;

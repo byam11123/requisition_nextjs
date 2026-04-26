@@ -19,7 +19,7 @@ hydrateDemoModuleGlobals();
 // ─────────────────────────────────────────────────────────────────────────────
 
 const NON_REQUISITION_MODULE_KEYS = new Set([
-  'REPAIR_MAINTAINANCE',
+  'REPAIR_MAINTENANCE',
   'DRIVER_ATTENDANCE',
   'SALARY_ADVANCE',
   'VEHICLE_FUEL',
@@ -38,11 +38,9 @@ export async function GET(req: NextRequest) {
 
 
 
-    const dbUser = await prisma.user.findUnique({ where: { id: BigInt(user.sub) }});
-    if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
+    const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
     const whereClause: any = {
-      organizationId: dbUser.organizationId,
+      organizationId: organizationId,
       OR: [
         { requiredFor: null },
         { requiredFor: '' },
@@ -85,17 +83,17 @@ export async function POST(req: NextRequest) {
 
 
 
-    const dbUser = await prisma.user.findUnique({ where: { id: BigInt(user.sub) }, include: { organization: true }});
-    if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
+    const userId = user.sub === 'demo' ? 'demo' : BigInt(user.sub);
 
-    const nextId = await prisma.requisition.count({ where: { organizationId: dbUser.organizationId }}) + 1;
-    const prefix = dbUser.organization.requisitionPrefix || 'REQ';
+    const prefix = 'REQ'; // Fallback prefix if we don't want to fetch org
+    const nextId = await prisma.requisition.count({ where: { organizationId: organizationId as any }}) + 1;
     const requestId = `${prefix}-${new Date().getFullYear()}-${nextId.toString().padStart(4, '0')}`;
 
     const requisition = await prisma.requisition.create({
       data: {
-        organizationId: dbUser.organizationId,
-        createdById: BigInt(user.sub),
+        organizationId: organizationId as any,
+        createdById: userId as any,
         requestId,
         status: data.submit ? 'SUBMITTED' : 'DRAFT',
         priority: data.priority || 'NORMAL',

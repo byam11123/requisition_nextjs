@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const scope = await resolveStoreOrganizationScope(user.sub);
+    const scope = await resolveStoreOrganizationScope(user.sub, user.organizationId);
     if (!scope) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const scope = await resolveStoreOrganizationScope(user.sub);
+    const scope = await resolveStoreOrganizationScope(user.sub, user.organizationId);
     if (!scope) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -64,7 +64,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const scope = await resolveStoreOrganizationScope(user.sub);
+    const scope = await resolveStoreOrganizationScope(user.sub, user.organizationId);
     if (!scope) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }

@@ -1,4 +1,8 @@
 "use client";
+import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
+
+
+
 
 import { useEffect, useMemo, useState } from "react";
 import { Check, GitBranch, Loader2, Save } from "lucide-react";
@@ -23,7 +27,7 @@ export default function WorkflowConfigPage() {
       return null;
     }
 
-    const storedUser = localStorage.getItem("user");
+    const storedUser = JSON.stringify(useAuthStore.getState().user);
     if (!storedUser) {
       return null;
     }
@@ -45,7 +49,7 @@ export default function WorkflowConfigPage() {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = useAuthStore.getState().token;
         const res = await fetch("/api/workflow-config/requisition", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -85,7 +89,7 @@ export default function WorkflowConfigPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch("/api/workflow-config/requisition", {
         method: "PUT",
         headers: {
@@ -294,3 +298,9 @@ export default function WorkflowConfigPage() {
     </div>
   );
 }
+
+
+
+
+
+
