@@ -34,12 +34,11 @@ export function UserList({ users, onAction, onPageAccess, onRoleAssign, onDelete
       setMenuUser(null);
     } else {
       const rect = e.currentTarget.getBoundingClientRect();
-      const isLastRows = users.findIndex(u => u.id === user.id) >= users.length - 2;
       
-      // Calculate position
+      // Calculate position (Always downside since Portal handles table overflow clipping)
       setMenuPos({
-        top: isLastRows ? rect.top - 160 : rect.bottom + 8,
-        left: rect.right - 192, // 192 is w-48 (48 * 4)
+        top: rect.bottom + 8,
+        left: rect.right - 192,
       });
       setMenuUser(user.id);
     }
