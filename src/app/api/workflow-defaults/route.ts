@@ -7,9 +7,9 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const module = searchParams.get("module");
+  const moduleName = searchParams.get("module");
 
-  if (!module) return NextResponse.json({ error: "Module is required" }, { status: 400 });
+  if (!moduleName) return NextResponse.json({ error: "Module is required" }, { status: 400 });
 
   try {
     const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       where: {
         organizationId_module: {
           organizationId: organizationId as any,
-          module: module,
+          module: moduleName,
         },
       },
     });

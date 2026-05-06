@@ -32,7 +32,7 @@ type SalaryAdvanceStatus = "PENDING" | "APPROVED" | "REJECTED" | "PAID";
 type SalaryAdvanceRecord = {
   id: string;
   requestId: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: SalaryAdvanceStatus;
   entryTimestamp: string;
   employeeName: string;
   employeeCode: string;
@@ -67,6 +67,11 @@ type SalaryAdvanceMeta = {
   totalAdditionalAdvances?: number;
   remarks?: string;
   deductionHistory?: SalaryAdvanceDeduction[];
+  paidAt?: string;
+  paidByName?: string;
+  paymentMode?: string;
+  paymentReference?: string;
+  paymentPhotoUrl?: string;
 };
 
 type SalaryAdvanceStoreGlobal = typeof globalThis & {

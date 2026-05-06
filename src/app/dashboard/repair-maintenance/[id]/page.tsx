@@ -64,7 +64,7 @@ export default function RepairDetailPage({ params }: { params: Promise<{ id: str
   const effectiveDeliveryStatus = logisticsDraft.deliveryStatus || repair.deliveryStatus;
 
   const isMasterLocked = effectiveDeliveryStatus === 'DELIVERED';
-  const userPayload = user ? { sub: user.sub, role: user.role } : null;
+  const userPayload = user ? { sub: user.id, role: user.role } : null;
   const isPaid = repair.warrantyStatus === 'IN_WARRANTY' || repair.paymentStatus === 'DONE';
   const isApproved = repair.warrantyStatus === 'IN_WARRANTY' || repair.approvalStatus === 'APPROVED';
   
@@ -74,10 +74,10 @@ export default function RepairDetailPage({ params }: { params: Promise<{ id: str
   const canDeliver = isApproved && repair.dispatchStatus === 'DISPATCHED' && repair.deliveryStatus !== 'DELIVERED' && userPayload && (userPayload.role === 'ADMIN' || userPayload.role === 'SITE_INCHARGE');
 
   const workflowActions: WorkflowAction[] = [
-    { label: 'Approve Repair', icon: CheckCircle, onClick: () => processAction('approve', { approvalStatus: 'APPROVED' }), variant: 'emerald', show: canApprove },
-    { label: 'Record Payment', icon: IndianRupee, onClick: () => setPaymentOpen(true), variant: 'purple', show: canPay },
-    { label: 'Dispatch to Site', icon: Truck, onClick: () => setDispatchConfirmOpen(true), variant: 'blue', show: canDispatch },
-    { label: 'Mark Delivered', icon: CheckCircle, onClick: () => setDeliveryConfirmOpen(true), variant: 'orange', show: canDeliver }
+    { label: 'Approve Repair', icon: CheckCircle, onClick: () => processAction('approve', { approvalStatus: 'APPROVED' }), variant: 'emerald', show: !!canApprove },
+    { label: 'Record Payment', icon: IndianRupee, onClick: () => setPaymentOpen(true), variant: 'purple', show: !!canPay },
+    { label: 'Dispatch to Site', icon: Truck, onClick: () => setDispatchConfirmOpen(true), variant: 'blue', show: !!canDispatch },
+    { label: 'Mark Delivered', icon: CheckCircle, onClick: () => setDeliveryConfirmOpen(true), variant: 'orange', show: !!canDeliver }
   ];
 
   const handlePaymentSubmit = async (data: any, file: File | null) => {
@@ -223,7 +223,7 @@ export default function RepairDetailPage({ params }: { params: Promise<{ id: str
         title="Confirm Delivery"
         message="Has the item been received at the site? This will mark the repair cycle as complete."
         confirmLabel="Yes, Delivered"
-        tone="emerald"
+        tone="info"
       />
     </div>
   );

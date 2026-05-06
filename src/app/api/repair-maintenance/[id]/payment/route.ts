@@ -24,7 +24,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       ...body,
       paymentStatus: body.paymentStatus || "DONE",
       paidAt: new Date().toISOString(),
-      paidByName: user.fullName || "Test User"
+      paidByName: "Test User"
     };
     return NextResponse.json(store[idx]);
   }

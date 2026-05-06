@@ -106,7 +106,7 @@ export default function AttendanceDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         <div className="w-full lg:w-80 space-y-6">
-          {record.status === 'PENDING' && user && canPerformStep('approve', record, { sub: user.sub, role: user.role }) && (
+          {record.status === 'PENDING' && user && canPerformStep('approve', record, { sub: user.id, role: user.role }) && (
             <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-6">
               <h3 className="font-semibold mb-4">Actions</h3>
               <div className="space-y-3">

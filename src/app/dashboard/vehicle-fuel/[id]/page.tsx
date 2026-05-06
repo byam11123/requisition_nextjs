@@ -246,13 +246,13 @@ export default function VehicleFuelDetailPage({ params }: { params: Promise<{ id
         </div>
 
         <ConfirmationModal 
-          open={showConfirm}
+          isOpen={showConfirm}
           onClose={() => setShowConfirm(false)}
           onConfirm={handleSaveBill}
           title="Finalize Billing Details?"
           message="Are you sure you want to save these billing details? Once saved, they will be finalized as a completed entry."
           confirmLabel="Yes, Finalize"
-          confirmTone="emerald"
+          tone="info"
         />
 
         <div className="w-full lg:w-80 space-y-6">
@@ -263,7 +263,7 @@ export default function VehicleFuelDetailPage({ params }: { params: Promise<{ id
                 Workflow Actions
               </h3>
               {record.approvalStatus === 'PENDING' ? (
-                (useAuthStore.getState().user && canPerformStep('approve', record, { sub: useAuthStore.getState().user!.sub, role: useAuthStore.getState().user!.role })) ? (
+                (useAuthStore.getState().user && canPerformStep('approve', record, { sub: useAuthStore.getState().user!.id, role: useAuthStore.getState().user!.role })) ? (
                   <div className="space-y-3">
                     <button 
                        onClick={() => handleAction('APPROVED')} 

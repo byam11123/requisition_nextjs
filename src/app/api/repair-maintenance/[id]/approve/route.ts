@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       ...store[idx], 
       approvalStatus: body.approvalStatus || "APPROVED",
       approvedAt: new Date().toISOString(),
-      approvedByName: user.fullName || "Test User"
+      approvedByName: "Test User"
     };
     return NextResponse.json(store[idx]);
   }

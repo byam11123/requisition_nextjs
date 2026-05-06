@@ -1,9 +1,5 @@
 "use client";
 import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
-
-
-
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -17,6 +13,12 @@ export default function CreateRequisitionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [users, setUsers] = useState<any[]>([]);
+  const [form, setForm] = useState({
+    approverId: '', payerId: '', dispatcherId: '',
+    materialDescription: '', siteAddress: '', quantity: '1', amount: '',
+    priority: 'NORMAL', poDetails: '', requiredFor: '', vendorName: '',
+    indentNo: '', description: '',
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,12 +47,6 @@ export default function CreateRequisitionPage() {
     };
     fetchData();
   }, []);
-  const [form, setForm] = useState({
-    approverId: '', payerId: '', dispatcherId: '',
-    materialDescription: '', siteAddress: '', quantity: '1', amount: '',
-    priority: 'NORMAL', poDetails: '', requiredFor: '', vendorName: '',
-    indentNo: '', description: '',
-  });
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
@@ -222,8 +218,3 @@ export default function CreateRequisitionPage() {
     </div>
   );
 }
-
-
-
-
-

@@ -119,7 +119,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         const meta = JSON.parse(existing.cardSubtitleInfo || "{}");
         meta.deliveryStatus = "DELIVERED";
         meta.receivedDate = new Date().toISOString();
-        meta.receivedBy = user.fullName || "System";
+        meta.receivedBy = "System";
         cardSubtitleInfo = JSON.stringify(meta);
       } catch (e) {
         console.error("Failed to update repair meta during delivery:", e);

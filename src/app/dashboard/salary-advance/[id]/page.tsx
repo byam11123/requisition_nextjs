@@ -186,16 +186,16 @@ export default function SalaryAdvanceDetailPage({ params }: { params: Promise<{ 
           ? "Waiting for management review." 
           : `${['APPROVED', 'PAID'].includes(record.status) ? 'Approved' : 'Rejected'} by ${record.approvedByName || 'Manager'}.`, 
         timestamp: record.status === 'PENDING' ? null : record.approvedAt, 
-        state: record.status === 'PENDING' ? 'current' : (['APPROVED', 'PAID', 'REJECTED'].includes(record.status) ? 'done' : 'upcoming')
+        state: record.status === 'PENDING' ? 'current' : (['APPROVED', 'PAID', 'REJECTED'].includes(record.status) ? 'done' : 'pending')
       }
     ];
 
     // Add ALL previous disbursements from history
     // We sort them chronologically to show the flow
     const previousDisbursements = history
-      .filter(h => h.status === 'PAID' && String(h.request_id) !== String(record.requestId))
-      .sort((a, b) => new Date(a.paid_at).getTime() - new Date(b.paid_at).getTime())
-      .map(h => ({
+      .filter((h: any) => h.status === 'PAID' && String(h.request_id) !== String(record.requestId))
+      .sort((a: any, b: any) => new Date(a.paid_at).getTime() - new Date(b.paid_at).getTime())
+      .map((h: any) => ({
         key: `disbursed-${h.request_id}`,
         title: `${h.request_type} Disbursed`,
         description: `₹${h.requested_amount} released via ${h.payment_mode}`,
@@ -213,7 +213,7 @@ export default function SalaryAdvanceDetailPage({ params }: { params: Promise<{ 
         ? `Disbursed via ${record.paymentMode} (${record.paymentReference}) by ${record.paidByName || 'Accounts'}` 
         : (record.status === 'REJECTED' ? "Payment cancelled." : "Waiting for payment release."), 
       timestamp: record.status === 'PAID' ? record.paidAt : null, 
-      state: record.status === 'APPROVED' ? 'current' : (record.status === 'PAID' ? 'done' : 'upcoming')
+      state: record.status === 'APPROVED' ? 'current' : (record.status === 'PAID' ? 'done' : 'pending')
     });
 
     return steps;
@@ -380,7 +380,7 @@ export default function SalaryAdvanceDetailPage({ params }: { params: Promise<{ 
           {record.status === 'PENDING' && (
             <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-6">
               <h3 className="font-semibold mb-4 text-sm text-slate-200">Workflow Actions</h3>
-              {user && canPerformStep('approve', record, { sub: user.sub, role: user.role }) ? (
+              {user && canPerformStep('approve', record, { sub: user.id, role: user.role }) ? (
                 <div className="space-y-3">
                   <button 
                     onClick={() => handleAction('APPROVED')} 
@@ -411,7 +411,7 @@ export default function SalaryAdvanceDetailPage({ params }: { params: Promise<{ 
               <h3 className="font-semibold mb-4 text-sm text-indigo-400 flex items-center gap-2">
                 <Wallet size={16} /> Payment Release
               </h3>
-              {user && canPerformStep('pay', record, { sub: user.sub, role: user.role }) ? (
+              {user && canPerformStep('pay', record, { sub: user.id, role: user.role }) ? (
                 <div className="space-y-3">
                   <p className="text-xs text-slate-400 mb-4 leading-relaxed">
                     This request has been approved. Please release the funds and record the payment details below.

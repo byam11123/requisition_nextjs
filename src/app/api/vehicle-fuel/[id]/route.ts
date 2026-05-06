@@ -33,6 +33,7 @@ type VehicleFuelMeta = {
   fuelPumpName?: string;
   billAmount?: number;
   billUploadedAt?: string | null;
+  billUploadedByName?: string | null;
 };
 
 type VehicleFuelRow = {

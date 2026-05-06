@@ -231,7 +231,7 @@ export default function ViewRequisitionPage({
         config: workflowConfig,
         key: "approval",
         roleKey: actorRoleKey,
-        userId: user?.sub || user?.id,
+        userId: user?.id,
         record: req,
       })
     : { allowed: false, reason: null };
@@ -240,7 +240,7 @@ export default function ViewRequisitionPage({
         config: workflowConfig,
         key: "payment",
         roleKey: actorRoleKey,
-        userId: user?.sub || user?.id,
+        userId: user?.id,
         record: req,
       })
     : { allowed: false, reason: null };
@@ -249,7 +249,7 @@ export default function ViewRequisitionPage({
         config: workflowConfig,
         key: "dispatch",
         roleKey: actorRoleKey,
-        userId: user?.sub || user?.id,
+        userId: user?.id,
         record: req,
       })
     : { allowed: false, reason: null };

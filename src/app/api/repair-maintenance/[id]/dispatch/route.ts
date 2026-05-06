@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     } else {
       updates.dispatchStatus = "DISPATCHED";
       updates.dispatchedAt = new Date().toISOString();
-      updates.dispatchedByName = user.fullName || "Test User";
+      updates.dispatchedByName = "Test User";
     }
 
     store[idx] = { ...prev, ...updates };
