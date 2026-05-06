@@ -16,7 +16,7 @@ export class RepairService {
     const rows = (await this.repository.getRepairs(organizationId)) as any[];
     return rows.map(row => ({
       ...row,
-      meta: this.parseMeta(row.card_subtitle_info)
+      meta: this.parseMeta(row.cardSubtitleInfo)
     }));
   }
 
@@ -24,7 +24,7 @@ export class RepairService {
     const row = await this.repository.getRepairById(id) as any;
     return {
       ...row,
-      meta: this.parseMeta(row.card_subtitle_info)
+      meta: this.parseMeta(row.cardSubtitleInfo)
     };
   }
 
@@ -34,19 +34,19 @@ export class RepairService {
     const meta = data.meta || {};
 
     if (stage === 'APPROVE') {
-      updates.approval_status = 'APPROVED';
-      updates.approved_at = new Date().toISOString();
+      updates.approvalStatus = 'APPROVED';
+      updates.approvedAt = new Date().toISOString();
     } else if (stage === 'DISPATCH') {
-      updates.dispatch_status = 'DISPATCHED';
-      updates.dispatched_at = new Date().toISOString();
+      updates.dispatchStatus = 'DISPATCHED';
+      updates.dispatchedAt = new Date().toISOString();
       meta.dispatchDate = new Date().toISOString();
     } else if (stage === 'DELIVER') {
-      updates.dispatch_status = 'DELIVERED';
+      updates.dispatchStatus = 'DELIVERED';
       meta.dateOfReturn = new Date().toISOString();
     }
 
     if (Object.keys(meta).length > 0) {
-      updates.card_subtitle_info = JSON.stringify(meta);
+      updates.cardSubtitleInfo = JSON.stringify(meta);
     }
 
     return await this.repository.updateRepair(id, updates);

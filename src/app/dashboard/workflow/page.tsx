@@ -45,22 +45,46 @@ export default function WorkflowConfigPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [moduleDefaults, setModuleDefaults] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const fetchConfig = async () => {
       try {
         const token = useAuthStore.getState().token;
-        const res = await fetch("/api/workflow-config/requisition", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) setConfig(await res.json());
+        const [configRes, rolesRes, usersRes] = await Promise.all([
+          fetch("/api/workflow-config/requisition", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/custom-roles", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/users", { headers: { Authorization: `Bearer ${token}` } })
+        ]);
 
-        const rolesRes = await fetch("/api/custom-roles", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        if (configRes.ok) setConfig(await configRes.json());
         if (rolesRes.ok) setRoleOptions(await rolesRes.json());
+        if (usersRes.ok) setUsers(await usersRes.json());
+
+        // Fetch module defaults
+        const modules = ['GENERAL', 'VEHICLE_FUEL', 'DRIVER_ATTENDANCE', 'SALARY_ADVANCE', 'REPAIR_MAINTENANCE'];
+        const defaultsMap: Record<string, any> = {};
+        await Promise.all(modules.map(async (m) => {
+          const res = await fetch(`/api/workflow-defaults?module=${m}`, { headers: { Authorization: `Bearer ${token}` } });
+          if (res.ok) {
+            const data = await res.json();
+            if (data) defaultsMap[m] = data;
+          }
+        }));
+        setModuleDefaults(defaultsMap);
+
+
+
+
+
+
+
+
+
+
       } catch {
-        setToast({ message: "Failed to load requisition workflow.", tone: "error" });
+        setToast({ message: "Failed to load workflow data.", tone: "error" });
       } finally {
         setLoading(false);
       }
@@ -68,6 +92,24 @@ export default function WorkflowConfigPage() {
 
     fetchConfig();
   }, []);
+
+  const saveModuleDefault = async (module: string, data: any) => {
+    try {
+      const token = useAuthStore.getState().token;
+      const res = await fetch("/api/workflow-defaults", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ module, ...data }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setModuleDefaults(prev => ({ ...prev, [module]: updated }));
+        setToast({ message: `${module} defaults saved.`, tone: "success" });
+      }
+    } catch (err) {
+      setToast({ message: "Failed to save module defaults.", tone: "error" });
+    }
+  };
 
   const orderedSteps = useMemo(
     () =>
@@ -282,6 +324,66 @@ export default function WorkflowConfigPage() {
                     <Check size={14} className="text-[var(--app-muted)]" />
                   </div>
                 ))}
+            </div>
+          </section>
+
+          {/* New Section: Default Assignees */}
+          <section className="rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)] p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-[var(--app-text)]">Default Assignees</h2>
+              <p className="text-xs text-indigo-400 font-medium bg-indigo-500/10 px-2 py-1 rounded-lg">Workflow v2</p>
+            </div>
+            <div className="space-y-6">
+              {[
+                { key: 'GENERAL', label: 'General Requisition' },
+                { key: 'VEHICLE_FUEL', label: 'Vehicle Fuel' },
+                { key: 'DRIVER_ATTENDANCE', label: 'Driver Attendance' },
+                { key: 'SALARY_ADVANCE', label: 'Salary Advance' },
+                { key: 'REPAIR_MAINTENANCE', label: 'Repair & Maintenance' }
+              ].map((m) => (
+                <div key={m.key} className="space-y-3 p-4 rounded-2xl bg-[var(--app-panel)] border border-[var(--app-border)]">
+                  <p className="text-xs font-bold uppercase tracking-wider text-indigo-400">{m.label}</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Default Approver</label>
+                      <select
+                        value={moduleDefaults[m.key]?.defaultApproverId || ''}
+                        onChange={(e) => saveModuleDefault(m.key, { ...moduleDefaults[m.key], defaultApproverId: e.target.value })}
+                        className="w-full bg-[var(--app-surface-strong)] border border-[var(--app-border)] rounded-xl px-3 py-2 text-sm text-[var(--app-text)] outline-none focus:border-indigo-500/50"
+                      >
+                        <option value="">No Default</option>
+                        {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                      </select>
+                    </div>
+                    {(m.key !== 'DRIVER_ATTENDANCE') && (
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Default Payer</label>
+                        <select
+                          value={moduleDefaults[m.key]?.defaultPayerId || ''}
+                          onChange={(e) => saveModuleDefault(m.key, { ...moduleDefaults[m.key], defaultPayerId: e.target.value })}
+                          className="w-full bg-[var(--app-surface-strong)] border border-[var(--app-border)] rounded-xl px-3 py-2 text-sm text-[var(--app-text)] outline-none focus:border-indigo-500/50"
+                        >
+                          <option value="">No Default</option>
+                          {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {(m.key === 'GENERAL' || m.key === 'VEHICLE_FUEL' || m.key === 'REPAIR_MAINTENANCE') && (
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Default Dispatcher</label>
+                        <select
+                          value={moduleDefaults[m.key]?.defaultDispatcherId || ''}
+                          onChange={(e) => saveModuleDefault(m.key, { ...moduleDefaults[m.key], defaultDispatcherId: e.target.value })}
+                          className="w-full bg-[var(--app-surface-strong)] border border-[var(--app-border)] rounded-xl px-3 py-2 text-sm text-[var(--app-text)] outline-none focus:border-indigo-500/50"
+                        >
+                          <option value="">No Default</option>
+                          {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 

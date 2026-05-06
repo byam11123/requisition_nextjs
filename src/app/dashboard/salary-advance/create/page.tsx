@@ -1,13 +1,9 @@
 "use client";
 import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
-
-
-
-
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -23,9 +19,9 @@ type SalaryAdvanceFormState = {
   designation: string;
   department: string;
   currentSalary: string;
-  totalAdvanceRequest: string;
+  requestedAmount: string;
+  requestType: "Initial" | "Additional";
   repaymentSchedule: string;
-  totalAdditionalAdvances: string;
   remarks: string;
 };
 
@@ -35,31 +31,78 @@ export default function CreateSalaryAdvancePage() {
   const [error, setError] = useState("");
   const [initialSlipPhoto, setInitialSlipPhoto] = useState<File | null>(null);
   const [initialSlipPreview, setInitialSlipPreview] = useState<string | null>(null);
-  const [entryTimestamp] = useState(() =>
-    new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }),
-  );
   const [form, setForm] = useState<SalaryAdvanceFormState>({
     employeeName: "",
     employeeCode: "",
     designation: "",
     department: "",
     currentSalary: "0",
-    totalAdvanceRequest: "0",
+    requestedAmount: "0",
+    requestType: "Initial",
     repaymentSchedule: "",
-    totalAdditionalAdvances: "0",
     remarks: "",
   });
+  const [users, setUsers] = useState<any[]>([]);
+  const [approverId, setApproverId] = useState("");
+  const [payerId, setPayerId] = useState("");
+
+  useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const token = useAuthStore.getState().token;
+        const [usersRes, defaultsRes] = await Promise.all([
+          fetch("/api/users", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/workflow-defaults?module=SALARY_ADVANCE", { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        if (usersRes.ok) setUsers(await usersRes.json());
+        if (defaultsRes.ok) {
+          const defaults = await defaultsRes.json();
+          if (defaults?.defaultApproverId) setApproverId(defaults.defaultApproverId);
+          if (defaults?.defaultPayerId) setPayerId(defaults.defaultPayerId);
+        }
+      } catch (err) {
+        console.error("Failed to load defaults", err);
+      }
+    };
+    loadDefaults();
+  }, []);
+
+  // Auto-detect request type based on employee code
+  useEffect(() => {
+    if (form.employeeCode.length >= 3) {
+      const checkHistory = async () => {
+        try {
+          const token = useAuthStore.getState().token;
+          const res = await fetch(`/api/salary-advance/history?employeeCode=${form.employeeCode}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const history = await res.json();
+            if (history && history.length > 0) {
+              const last = history[0];
+              setForm(prev => ({ 
+                ...prev, 
+                requestType: "Additional",
+                employeeName: last.employee_name || prev.employeeName,
+                designation: last.designation || prev.designation,
+                department: last.department || prev.department,
+                currentSalary: String(last.current_salary || prev.currentSalary)
+              }));
+            } else {
+              setForm(prev => ({ ...prev, requestType: "Initial" }));
+            }
+          }
+        } catch (err) {
+          console.error("Failed to check history", err);
+        }
+      };
+      const timer = setTimeout(checkHistory, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [form.employeeCode]);
 
   const inputCls =
     "w-full rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500/50";
-  const disabledCls = `${inputCls} cursor-not-allowed opacity-70`;
   const labelCls =
     "mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400";
 
@@ -73,7 +116,7 @@ export default function CreateSalaryAdvancePage() {
       setForm((current) => ({ ...current, [key]: event.target.value }));
     };
 
-  const uploadInitialSlipPhoto = async (file: File, requisitionId: string) => {
+  const uploadSlipPhoto = async (file: File, requisitionId: string) => {
     const token = useAuthStore.getState().token;
     const formData = new FormData();
     formData.append("file", file);
@@ -124,7 +167,7 @@ export default function CreateSalaryAdvancePage() {
     setLoading(true);
     try {
       const token = useAuthStore.getState().token;
-      const response = await fetch("/api/salary-advance", {
+      const response = await fetch("/api/salary-advance/requests", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -136,10 +179,12 @@ export default function CreateSalaryAdvancePage() {
           designation: form.designation.trim(),
           department: form.department.trim(),
           currentSalary: Number(form.currentSalary || 0),
-          totalAdvanceRequest: Number(form.totalAdvanceRequest || 0),
+          requestedAmount: Number(form.requestedAmount || 0),
+          requestType: form.requestType,
           repaymentSchedule: form.repaymentSchedule.trim(),
-          totalAdditionalAdvances: Number(form.totalAdditionalAdvances || 0),
           remarks: form.remarks.trim(),
+          approverId: approverId || null,
+          payerId: payerId || null,
         }),
       });
 
@@ -149,7 +194,7 @@ export default function CreateSalaryAdvancePage() {
       }
 
       const created = await response.json();
-      await uploadInitialSlipPhoto(initialSlipPhoto, String(created.id));
+      await uploadSlipPhoto(initialSlipPhoto, String(created.id));
       router.push(`/dashboard/salary-advance/${created.id}`);
     } catch (submitError: unknown) {
       const message =
@@ -187,17 +232,6 @@ export default function CreateSalaryAdvancePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelCls}>Entry Timestamp</label>
-              <input value={entryTimestamp} disabled className={disabledCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Request ID</label>
-              <input value="Auto Generated on Submit" disabled className={disabledCls} />
-            </div>
-          </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Employee Name *</label>
@@ -239,27 +273,32 @@ export default function CreateSalaryAdvancePage() {
               />
             </div>
           </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className={labelCls}>Current Salary</label>
+              <label className={labelCls}>Requested Amount *</label>
               <input
                 type="number"
                 min="0"
-                value={form.currentSalary}
-                onChange={setField("currentSalary")}
+                value={form.requestedAmount}
+                onChange={setField("requestedAmount")}
                 className={inputCls}
+                required
               />
             </div>
             <div>
-              <label className={labelCls}>Total Advance Request</label>
-              <input
-                type="number"
-                min="0"
-                value={form.totalAdvanceRequest}
-                onChange={setField("totalAdvanceRequest")}
+              <label className={labelCls}>Request Type *</label>
+              <select
+                value={form.requestType}
+                onChange={(e) => setForm(prev => ({ ...prev, requestType: e.target.value as any }))}
                 className={inputCls}
-              />
+                required
+              >
+                <option value="Initial">Initial Request (First Time)</option>
+                <option value="Additional">Additional Request (Top-up)</option>
+              </select>
+              <p className="mt-1.5 text-[10px] text-slate-500 uppercase tracking-wider">
+                {form.requestType === 'Initial' ? 'New employee advance account' : 'Adding to existing balance'}
+              </p>
             </div>
           </div>
 
@@ -275,12 +314,12 @@ export default function CreateSalaryAdvancePage() {
               />
             </div>
             <div>
-              <label className={labelCls}>Total Additional Advances</label>
+              <label className={labelCls}>Current Salary</label>
               <input
                 type="number"
                 min="0"
-                value={form.totalAdditionalAdvances}
-                onChange={setField("totalAdditionalAdvances")}
+                value={form.currentSalary}
+                onChange={setField("currentSalary")}
                 className={inputCls}
               />
             </div>
@@ -296,9 +335,33 @@ export default function CreateSalaryAdvancePage() {
             />
           </div>
 
+          <div className="space-y-4 pt-4 border-t border-white/5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+              Workflow Assignment
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5">
+                <label className={labelCls}>Assigned Approver *</label>
+                <select value={approverId} onChange={e => setApproverId(e.target.value)} className={inputCls} required>
+                  <option value="">Select Approver</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>)}
+                </select>
+                <p className="mt-2 text-[10px] text-slate-500 uppercase tracking-wider">Approval Step</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5">
+                <label className={labelCls}>Assigned Payer *</label>
+                <select value={payerId} onChange={e => setPayerId(e.target.value)} className={inputCls} required>
+                  <option value="">Select Payer</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>)}
+                </select>
+                <p className="mt-2 text-[10px] text-slate-500 uppercase tracking-wider">Payment Step</p>
+              </div>
+            </div>
+          </div>
+
           <div className="border-t border-white/5 pt-6">
             <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-indigo-400">
-              Initial Slip Photo
+              Slip Photo
             </p>
             <div className="rounded-2xl border border-dashed border-white/10 p-4">
               {initialSlipPreview ? (
@@ -325,7 +388,7 @@ export default function CreateSalaryAdvancePage() {
               ) : (
                 <div className="py-8 text-center">
                   <p className="mb-2 text-sm text-slate-400">
-                    Upload the initial salary advance slip photo
+                    Upload the salary advance slip photo
                   </p>
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5">
                     <Upload size={14} /> Choose File
@@ -364,8 +427,3 @@ export default function CreateSalaryAdvancePage() {
     </div>
   );
 }
-
-
-
-
-

@@ -4,10 +4,10 @@ import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
 
 
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, AlertCircle, Loader2, User as UserIcon } from 'lucide-react';
 import FormSelect, {
   type FormSelectOption,
 } from '@/components/ui/form-select';
@@ -16,7 +16,37 @@ export default function CreateRequisitionPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = useAuthStore.getState().token;
+        const [usersRes, defaultsRes] = await Promise.all([
+          fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/workflow-defaults?module=GENERAL', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+
+        if (usersRes.ok) setUsers(await usersRes.json());
+        if (defaultsRes.ok) {
+          const defaults = await defaultsRes.json();
+          if (defaults) {
+            setForm(f => ({
+              ...f,
+              approverId: defaults.defaultApproverId || '',
+              payerId: defaults.defaultPayerId || '',
+              dispatcherId: defaults.defaultDispatcherId || '',
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+      }
+    };
+    fetchData();
+  }, []);
   const [form, setForm] = useState({
+    approverId: '', payerId: '', dispatcherId: '',
     materialDescription: '', siteAddress: '', quantity: '1', amount: '',
     priority: 'NORMAL', poDetails: '', requiredFor: '', vendorName: '',
     indentNo: '', description: '',
@@ -128,6 +158,52 @@ export default function CreateRequisitionPage() {
               <textarea value={form.description} onChange={set('description')} rows={3}
                 className={`${inputCls} resize-none`} />
             </div>
+          </div>
+
+          {/* Workflow Assignees */}
+          <div className="border-t border-white/5 pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <UserIcon size={14} className="text-indigo-400" />
+              <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Workflow Assignment</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className={labelCls}>Assigned Approver</label>
+                <FormSelect
+                  value={form.approverId}
+                  options={[
+                    { value: '', label: 'Select Approver' },
+                    ...users.map(u => ({ value: u.id, label: u.fullName }))
+                  ]}
+                  onChange={(value) => setForm(f => ({ ...f, approverId: value }))}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Assigned Payer</label>
+                <FormSelect
+                  value={form.payerId}
+                  options={[
+                    { value: '', label: 'Select Payer' },
+                    ...users.map(u => ({ value: u.id, label: u.fullName }))
+                  ]}
+                  onChange={(value) => setForm(f => ({ ...f, payerId: value }))}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Assigned Dispatcher</label>
+                <FormSelect
+                  value={form.dispatcherId}
+                  options={[
+                    { value: '', label: 'Select Dispatcher' },
+                    ...users.map(u => ({ value: u.id, label: u.fullName }))
+                  ]}
+                  onChange={(value) => setForm(f => ({ ...f, dispatcherId: value }))}
+                />
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-slate-500 italic">
+              * Assign specific team members to handle each step of the workflow. Admin can override these.
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-white/5">

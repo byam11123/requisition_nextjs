@@ -45,14 +45,16 @@ export function FuelTable({
             <th className="px-4 py-3">RC No</th>
             <th className="px-4 py-3">Running</th>
             <th className="px-4 py-3">Requirement</th>
+            <th className="px-4 py-3">Requested By</th>
             <th className="px-4 py-3">Status</th>
+            <th className="px-4 py-3 text-right">Bill Amount</th>
             <th className="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
           {requests.length === 0 ? (
             <tr>
-              <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+              <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
                 No fuel requests found.
               </td>
             </tr>
@@ -81,7 +83,14 @@ export function FuelTable({
                   <p className="text-xs text-slate-500">{row.lastReading} to {row.currentReading}</p>
                 </td>
                 <td className="px-4 py-3 text-slate-300">{row.currentRequirementLitres} L</td>
+                <td className="px-4 py-3">
+                  <p className="font-medium text-slate-200">{row.requestedByName}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-tight">{formatDate(row.entryTimestamp)}</p>
+                </td>
                 <td className="px-4 py-3"><StatusChip tone={getStatusTone(row.status)}>{row.status}</StatusChip></td>
+                <td className="px-4 py-3 text-right font-bold text-slate-200">
+                  {row.billAmount ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(row.billAmount) : '—'}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <ActionIconButton href={`/dashboard/vehicle-fuel/${row.id}`} icon={Eye} label="View Details" tone="indigo" />
                 </td>

@@ -4,6 +4,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { prisma } from "@/lib/prisma";
+import { canPerformStep } from "@/lib/workflow-assignee-guard";
 
 declare global {
   interface BigInt {
@@ -48,9 +49,6 @@ export async function POST(
   }
 
   const role = String(user.role || "").toUpperCase().trim();
-  if (role !== "MANAGER") {
-    return NextResponse.json({ error: "Only managers can approve attendance." }, { status: 403 });
-  }
 
   const body = (await req.json()) as { status?: AttendanceStatus };
   const nextStatus: AttendanceStatus =
@@ -98,6 +96,10 @@ export async function POST(
 
     if (!existing) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (!canPerformStep('approve', existing, user)) {
+      return NextResponse.json({ error: "You are not assigned to approve this attendance record" }, { status: 403 });
     }
 
     const updated = await prisma.requisition.update({

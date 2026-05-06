@@ -136,7 +136,7 @@ export default function DashboardPage() {
     setDeleting(true);
     try {
       const token = useAuthStore.getState().token;
-      await fetch('/api/requisitions/bulk-delete', {
+      await fetch('/api/requisitions', {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: selectedIds }),

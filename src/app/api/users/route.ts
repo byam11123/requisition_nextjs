@@ -55,7 +55,7 @@ const DEV_USERS = [
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
-  if (!user || user.role !== "ADMIN") {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

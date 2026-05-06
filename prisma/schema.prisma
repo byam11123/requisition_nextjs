@@ -26,6 +26,7 @@ model Organization {
   contactConfig     ContactConfig?
   designationConfig DesignationConfig?
   storeConfig       StoreManagementConfig?
+  workflowDefaults  WorkflowDefaults[]
 
   @@map("organizations")
 }
@@ -115,6 +116,10 @@ model User {
   approvedRequisitions    Requisition[] @relation("ApprovedBy")
   paidRequisitions        Requisition[] @relation("PaidBy")
 
+  assignedApprovals       Requisition[] @relation("RequisitionApprover")
+  assignedPayments        Requisition[] @relation("RequisitionPayer")
+  assignedDispatches      Requisition[] @relation("RequisitionDispatcher")
+
   approvals               Approval[]
   attachmentsUploaded     RequisitionAttachment[]
   syncLogs                SyncLog[]
@@ -184,6 +189,11 @@ model Requisition {
   dispatchedById          BigInt?            @map("dispatched_by")
   approvedById            BigInt?            @map("approved_by")
   paidById                BigInt?            @map("paid_by")
+
+  approverId              BigInt?            @map("approver_id")
+  payerId                 BigInt?            @map("payer_id")
+  dispatcherId            BigInt?            @map("dispatcher_id")
+  
   dispatchedAt            DateTime?
 
   createdAt               DateTime           @default(now()) @map("created_at")
@@ -202,6 +212,10 @@ model Requisition {
   dispatchedBy    User?            @relation("DispatchedBy", fields: [dispatchedById], references: [id])
   approvedBy      User?            @relation("ApprovedBy", fields: [approvedById], references: [id])
   paidBy          User?            @relation("PaidBy", fields: [paidById], references: [id])
+
+  approver        User?            @relation("RequisitionApprover", fields: [approverId], references: [id])
+  payer           User?            @relation("RequisitionPayer", fields: [payerId], references: [id])
+  dispatcher      User?            @relation("RequisitionDispatcher", fields: [dispatcherId], references: [id])
 
   attachments     RequisitionAttachment[]
   approvals       Approval[]
@@ -320,4 +334,19 @@ enum SyncOperation {
   CREATE
   UPDATE
   DELETE
+}
+
+model WorkflowDefaults {
+  id             BigInt   @id @default(autoincrement())
+  organizationId BigInt   @map("organization_id")
+  module         String   // 'REQUISITION', 'VEHICLE_FUEL', 'ATTENDANCE', etc.
+
+  defaultApproverId   BigInt? @map("default_approver_id")
+  defaultPayerId      BigInt? @map("default_payer_id")
+  defaultDispatcherId BigInt? @map("default_dispatcher_id")
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, module])
+  @@map("workflow_defaults")
 }

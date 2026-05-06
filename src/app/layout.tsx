@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "A Multi-Tenant SaaS Requisition Management System",
 };
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: {
@@ -27,6 +29,7 @@ export default function RootLayout({
       <body className={`${expose.variable} app-body min-h-screen antialiased`}>
         <ThemeProvider>
           <div className="app-ambient" />
+          <Toaster position="top-right" richColors theme="dark" />
           <GlobalErrorBoundary>
             <AppContentShell>
               {children}

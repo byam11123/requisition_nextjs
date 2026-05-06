@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
 import { hydrateDemoModuleGlobals } from '@/lib/stores/demo-module-store';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
 
 hydrateDemoModuleGlobals();
 
@@ -37,6 +35,9 @@ const CATEGORY_FIELD: Record<string, string> = {
   VENDOR_PAYMENT:  'vendorPaymentDetailsUrl',
   ATTENDANCE_GEOTAG: 'materialPhotoUrl',
   SALARY_ADVANCE_SLIP: 'materialPhotoUrl',
+  FUEL_READING: 'materialPhotoUrl',
+  FUEL_LOGBOOK: 'paymentPhotoUrl',
+  FUEL_BILL: 'billPhotoUrl',
 };
 
 const REPAIR_CATEGORY_FIELD: Record<string, string> = {
@@ -62,9 +63,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'file and requisitionId are required' }, { status: 400 });
     }
 
-    // ── Supabase Storage Upload ───────────────────────────────────────────
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    // ── Supabase Admin Client for Storage (Bypass RLS) ───────────────────
+    const { createAdminClient } = await import('@/lib/supabase/admin');
+    const supabase = createAdminClient();
 
     const ext      = file.name.split('.').pop() || 'bin';
     const filename = `${Date.now()}_${reqId}_${category.toLowerCase()}.${ext}`;
@@ -135,8 +136,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Update database metadata ──────────────────────────────────────────
-    if (category === 'REPAIR_AFTER' || category === 'DISPATCH_ITEM') {
+    // ── Update database metadata and specialized tables ──────────────────
+    if (category === 'REPAIR_AFTER' || category === 'DISPATCH_ITEM' || category === 'FUEL_BILL' || category === 'SALARY_ADVANCE_SLIP') {
       try {
         const requisition = await prisma.requisition.findUnique({ where: { id: BigInt(reqId) } });
         if (requisition) {
@@ -146,6 +147,24 @@ export async function POST(req: NextRequest) {
           }
           if (category === 'REPAIR_AFTER') meta.repairStatusAfterPhotoUrl = publicUrl;
           if (category === 'DISPATCH_ITEM') meta.dispatchItemPhotoUrl = publicUrl;
+          if (category === 'FUEL_BILL') {
+            meta.billUploadedAt = new Date().toISOString();
+            const dbUser = await prisma.user.findUnique({ where: { id: BigInt(user.sub) } });
+            if (dbUser) meta.billUploadedByName = dbUser.fullName;
+          }
+          
+          if (category === 'SALARY_ADVANCE_SLIP') {
+            meta.slipPhotoUrl = publicUrl;
+            // Sync to specialized ledger
+            if (requisition.requestId) {
+              await prisma.$executeRaw`
+                UPDATE salary_advance_requests 
+                SET slip_photo_url = ${publicUrl}
+                WHERE request_id = ${requisition.requestId}
+              `;
+            }
+          }
+          
           await prisma.requisition.update({
             where: { id: BigInt(reqId) },
             data: { cardSubtitleInfo: JSON.stringify(meta) },

@@ -27,6 +27,8 @@ type SalaryAdvanceDeduction = {
   remark: string;
 };
 
+type SalaryAdvanceStatus = "PENDING" | "APPROVED" | "REJECTED" | "PAID";
+
 type SalaryAdvanceRecord = {
   id: string;
   requestId: string;
@@ -47,6 +49,11 @@ type SalaryAdvanceRecord = {
   balanceAdvance: number;
   approvedAt?: string | null;
   approvedByName?: string | null;
+  paidAt?: string | null;
+  paidByName?: string | null;
+  paymentMode?: string | null;
+  paymentReference?: string | null;
+  paymentPhotoUrl?: string | null;
 };
 
 type SalaryAdvanceMeta = {
@@ -69,6 +76,7 @@ type SalaryAdvanceStoreGlobal = typeof globalThis & {
 type SalaryAdvanceRow = {
   id: bigint | string;
   requestId?: string | null;
+  status?: string | null;
   approvalStatus?: string | null;
   createdAt?: Date | string | null;
   submittedAt?: Date | string | null;
@@ -78,9 +86,14 @@ type SalaryAdvanceRow = {
   amount?: Prisma.Decimal | number | string | null;
   description?: string | null;
   materialPhotoUrl?: string | null;
+  paymentPhotoUrl?: string | null;
   cardSubtitleInfo?: string | null;
   approvedAt?: Date | string | null;
   approvedBy?: {
+    fullName?: string | null;
+  } | null;
+  paidAt?: Date | string | null;
+  paidBy?: {
     fullName?: string | null;
   } | null;
 };
@@ -97,9 +110,11 @@ const parseMeta = (raw: string | null | undefined): SalaryAdvanceMeta => {
   }
 };
 
-const mapApprovalStatusToStatus = (
+const mapRequisitionStatus = (
+  rowStatus: string | null | undefined,
   approvalStatus: string | null | undefined,
-): "PENDING" | "APPROVED" | "REJECTED" => {
+): SalaryAdvanceStatus => {
+  if (rowStatus === "PAID") return "PAID";
   if (approvalStatus === "APPROVED") return "APPROVED";
   if (approvalStatus === "REJECTED") return "REJECTED";
   return "PENDING";
@@ -133,7 +148,7 @@ const mapSalaryAdvanceRecord = (row: SalaryAdvanceRow): SalaryAdvanceRecord => {
   return {
     id: String(row.id),
     requestId: row.requestId || "",
-    status: mapApprovalStatusToStatus(row.approvalStatus),
+    status: mapRequisitionStatus(row.status, row.approvalStatus),
     entryTimestamp: String(row.submittedAt || row.createdAt || new Date().toISOString()),
     employeeName: meta.employeeName || row.materialDescription || "",
     employeeCode: meta.employeeCode || "",
@@ -155,6 +170,11 @@ const mapSalaryAdvanceRecord = (row: SalaryAdvanceRow): SalaryAdvanceRecord => {
           ? new Date(row.approvedAt).toISOString()
           : null,
     approvedByName: row.approvedBy?.fullName || null,
+    paidAt: row.paidAt ? new Date(row.paidAt as any).toISOString() : meta.paidAt || null,
+    paidByName: row.paidBy ? (row.paidBy as any).fullName : meta.paidByName || null,
+    paymentMode: meta.paymentMode || null,
+    paymentReference: meta.paymentReference || null,
+    paymentPhotoUrl: row.paymentPhotoUrl || meta.paymentPhotoUrl || null,
   };
 };
 
@@ -193,6 +213,7 @@ export async function GET(
       },
       include: {
         approvedBy: { select: { fullName: true } },
+        paidBy: { select: { fullName: true } },
       },
     });
     if (!row) {
@@ -276,6 +297,7 @@ export async function PUT(
       },
       include: {
         approvedBy: { select: { fullName: true } },
+        paidBy: { select: { fullName: true } },
       },
     });
     if (!row) {

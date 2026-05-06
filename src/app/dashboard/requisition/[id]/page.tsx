@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useAuthStore } from "@/modules/auth/hooks/use-auth-store";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -27,6 +28,8 @@ import ConfirmationModal from "@/components/ui/confirmation-modal";
 import FormSelect, {
   type FormSelectOption,
 } from "@/components/ui/form-select";
+import PaymentModal from "@/modules/common/components/payment-modal";
+import WorkflowActionCard, { type WorkflowAction } from "@/modules/common/components/workflow-action-card";
 
 type ApprovalModalProps = {
   open: boolean;
@@ -35,13 +38,7 @@ type ApprovalModalProps = {
   onSubmit: (status: string, notes: string) => void;
 };
 
-type PaymentModalProps = {
-  open: boolean;
-  loading: boolean;
-  amount: number;
-  onClose: () => void;
-  onSubmit: (payload: Record<string, unknown>, file: File | null) => void;
-};
+
 
 type DashboardUser = {
   role?: string;
@@ -160,135 +157,7 @@ function ApprovalModal({ open, loading, onClose, onSubmit }: ApprovalModalProps)
   );
 }
 
-function PaymentModal({
-  open,
-  loading,
-  amount,
-  onClose,
-  onSubmit,
-}: PaymentModalProps) {
-  const [paymentStatus, setPaymentStatus] = useState("DONE");
-  const [utrNo, setUtrNo] = useState("");
-  const [paymentMode, setPaymentMode] = useState("UPI");
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
-  const [paidAmount, setPaidAmount] = useState(amount || 0);
-  const [file, setFile] = useState<File | null>(null);
-  const paymentStatusOptions: FormSelectOption<string>[] = [
-    { value: "DONE", label: "Done" },
-    { value: "PARTIAL", label: "Partial" },
-    { value: "NOT_DONE", label: "Not Done" },
-  ];
-  const paymentModeOptions: FormSelectOption<string>[] = [
-    { value: "UPI", label: "UPI" },
-    { value: "NEFT", label: "NEFT" },
-    { value: "RTGS", label: "RTGS" },
-    { value: "CASH", label: "Cash" },
-    { value: "CHEQUE", label: "Cheque" },
-  ];
 
-  if (!open) {
-    return null;
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-slate-900 p-5 shadow-2xl sm:p-6 lg:p-8">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <h2 className="text-lg font-semibold text-slate-100 sm:text-xl">Update Payment</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-white/5"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Payment Status
-            </label>
-            <FormSelect
-              value={paymentStatus}
-              options={paymentStatusOptions}
-              onChange={setPaymentStatus}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input
-              value={utrNo}
-              onChange={(event) => setUtrNo(event.target.value)}
-              placeholder="UTR Number"
-              className="rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 outline-none focus:border-indigo-500/50"
-            />
-            <FormSelect
-              value={paymentMode}
-              options={paymentModeOptions}
-              onChange={setPaymentMode}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input
-              type="date"
-              value={paymentDate}
-              onChange={(event) => setPaymentDate(event.target.value)}
-              className="rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 outline-none focus:border-indigo-500/50"
-            />
-            <input
-              type="number"
-              value={paidAmount}
-              onChange={(event) => setPaidAmount(Number(event.target.value))}
-              className="rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 outline-none focus:border-indigo-500/50"
-              placeholder="Amount"
-            />
-          </div>
-
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-400 transition-colors hover:border-indigo-500/30 hover:text-slate-200">
-            <Upload size={14} />
-            {file ? file.name : "Upload Payment Proof"}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => setFile(event.target.files?.[0] || null)}
-            />
-          </label>
-        </div>
-
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-xl border border-white/10 px-4 py-2.5 text-slate-400 transition-colors hover:bg-white/5"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              onSubmit(
-                {
-                  paymentStatus,
-                  utrNo,
-                  paymentMode,
-                  paymentDate: new Date(paymentDate).toISOString(),
-                  amount: paidAmount,
-                },
-                file,
-              )
-            }
-            className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-emerald-500"
-          >
-            {loading ? <Loader2 size={16} className="mx-auto animate-spin" /> : "Save Payment"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function ViewRequisitionPage({
   params,
@@ -296,22 +165,7 @@ export default function ViewRequisitionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [user] = useState<DashboardUser | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(storedUser) as DashboardUser;
-    } catch {
-      return null;
-    }
-  });
+  const { user, token } = useAuthStore();
   const [req, setReq] = useState<RequisitionRecord | null>(null);
   const [workflowConfig, setWorkflowConfig] = useState(DEFAULT_REQUISITION_WORKFLOW_CONFIG);
   const [loading, setLoading] = useState(true);
@@ -325,7 +179,7 @@ export default function ViewRequisitionPage({
   const loadReq = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch(`/api/requisitions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -338,40 +192,37 @@ export default function ViewRequisitionPage({
   };
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const token = localStorage.getItem("token");
+    if (!token) return;
 
-      void (async () => {
-        setLoading(true);
-        try {
-          const [reqRes, workflowRes] = await Promise.all([
-            fetch(`/api/requisitions/${id}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-            fetch("/api/workflow-config/requisition", {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-          ]);
+    void (async () => {
+      setLoading(true);
+      try {
+        const [reqRes, workflowRes] = await Promise.all([
+          fetch(`/api/requisitions/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("/api/workflow-config/requisition", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-          if (reqRes.ok) {
-            setReq(await reqRes.json());
-          }
-
-          if (workflowRes.ok) {
-            setWorkflowConfig(await workflowRes.json());
-          }
-        } finally {
-          setLoading(false);
+        if (reqRes.ok) {
+          setReq(await reqRes.json());
         }
-      })();
-    }, 0);
 
-    return () => window.clearTimeout(timer);
-  }, [id]);
+        if (workflowRes.ok) {
+          setWorkflowConfig(await workflowRes.json());
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [id, token]);
 
   const role = user?.role;
   const actorRoleKey = user?.customRoleKey || role;
   const isPurchaser = role === "PURCHASER";
+  const isAdmin = role === "ADMIN";
   const enabledWorkflowSteps = getEnabledRequisitionWorkflowSteps(workflowConfig);
   const paymentStep = getRequisitionWorkflowStep(workflowConfig, "payment");
 
@@ -380,6 +231,7 @@ export default function ViewRequisitionPage({
         config: workflowConfig,
         key: "approval",
         roleKey: actorRoleKey,
+        userId: user?.sub || user?.id,
         record: req,
       })
     : { allowed: false, reason: null };
@@ -388,6 +240,7 @@ export default function ViewRequisitionPage({
         config: workflowConfig,
         key: "payment",
         roleKey: actorRoleKey,
+        userId: user?.sub || user?.id,
         record: req,
       })
     : { allowed: false, reason: null };
@@ -396,27 +249,48 @@ export default function ViewRequisitionPage({
         config: workflowConfig,
         key: "dispatch",
         roleKey: actorRoleKey,
+        userId: user?.sub || user?.id,
         record: req,
       })
     : { allowed: false, reason: null };
 
-  const canUploadBill =
-    isPurchaser && req?.approvalStatus !== "APPROVED" && req?.approvalStatus !== "REJECTED";
-  const canUploadMaterial =
-    isPurchaser && req?.approvalStatus !== "APPROVED" && req?.approvalStatus !== "REJECTED";
-  const canUploadVendorPayment =
-    isPurchaser &&
-    Boolean(paymentStep?.enabled) &&
-    req?.paymentStatus !== "DONE" &&
-    req?.approvalStatus !== "REJECTED";
+  const isFinalized = req?.approvalStatus === "APPROVED" || req?.approvalStatus === "REJECTED";
 
-  const hasActions =
-    approvalAccess.allowed || paymentAccess.allowed || dispatchAccess.allowed;
+  // Lock uploads after the request is finalized (Approved/Rejected)
+  const canUploadBill = !isFinalized && (isAdmin || isPurchaser);
+  const canUploadMaterial = !isFinalized && (isAdmin || isPurchaser);
+  const canUploadVendorPayment = !isFinalized && (isAdmin || (isPurchaser && Boolean(paymentStep?.enabled) && req?.paymentStatus !== "DONE"));
+
+  const workflowActions: WorkflowAction[] = [
+    {
+      label: getRequisitionWorkflowStep(workflowConfig, "approval")?.label || "Approval",
+      icon: CheckCircle,
+      onClick: () => setApprovalOpen(true),
+      variant: 'purple',
+      show: Boolean(approvalAccess.allowed)
+    },
+    {
+      label: getRequisitionWorkflowStep(workflowConfig, "payment")?.label || "Payment",
+      icon: IndianRupee,
+      onClick: () => setPaymentOpen(true),
+      variant: 'emerald',
+      show: Boolean(paymentAccess.allowed)
+    },
+    {
+      label: getRequisitionWorkflowStep(workflowConfig, "dispatch")?.label || "Dispatch",
+      icon: Package,
+      onClick: () => setDispatchModalOpen(true),
+      variant: 'sky',
+      show: Boolean(dispatchAccess.allowed)
+    }
+  ];
+
+  const hasActions = approvalAccess.allowed || paymentAccess.allowed || dispatchAccess.allowed;
 
   const handleApproval = async (status: string, notes: string) => {
     setModalLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch(`/api/requisitions/${id}/approve`, {
         method: "POST",
         headers: {
@@ -441,7 +315,7 @@ export default function ViewRequisitionPage({
   const handlePayment = async (payload: Record<string, unknown>, file: File | null) => {
     setModalLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch(`/api/requisitions/${id}/payment`, {
         method: "POST",
         headers: {
@@ -466,7 +340,7 @@ export default function ViewRequisitionPage({
         formData.append("requisitionId", id);
         const uploadRes = await fetch("/api/uploads", {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token || useAuthStore.getState().token}` },
           body: formData,
         });
         if (uploadRes.ok) {
@@ -487,7 +361,7 @@ export default function ViewRequisitionPage({
   const handleDispatch = async () => {
     setModalLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const res = await fetch(`/api/requisitions/${id}/dispatch`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -526,7 +400,7 @@ export default function ViewRequisitionPage({
     setLocalPreviews((prev) => ({ ...prev, [urlKey]: blobUrl }));
 
     try {
-      const token = localStorage.getItem("token");
+      const token = useAuthStore.getState().token;
       const formData = new FormData();
       formData.append("file", file);
       formData.append("category", category);
@@ -775,50 +649,7 @@ export default function ViewRequisitionPage({
         </div>
 
         <div className="w-full shrink-0 space-y-6 lg:w-80">
-          <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-5 sm:p-6">
-            <h3 className="mb-3 text-base font-semibold text-slate-100">Actions</h3>
-            <div className="space-y-3">
-              {approvalAccess.allowed ? (
-                <button
-                  type="button"
-                  onClick={() => setApprovalOpen(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-500"
-                >
-                  <CheckCircle size={16} />
-                  {getRequisitionWorkflowStep(workflowConfig, "approval")?.label || "Approval"}
-                </button>
-              ) : null}
-
-              {paymentAccess.allowed ? (
-                <button
-                  type="button"
-                  onClick={() => setPaymentOpen(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500"
-                >
-                  <IndianRupee size={16} />
-                  {getRequisitionWorkflowStep(workflowConfig, "payment")?.label || "Payment"}
-                </button>
-              ) : null}
-
-              {dispatchAccess.allowed ? (
-                <button
-                  type="button"
-                  onClick={() => setDispatchModalOpen(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500"
-                >
-                  <Package size={16} />
-                  {getRequisitionWorkflowStep(workflowConfig, "dispatch")?.label || "Dispatch"}
-                </button>
-              ) : null}
-
-              {!hasActions ? (
-                <p className="text-sm text-slate-500">
-                  This requisition has no pending actions for your role under the active workflow.
-                </p>
-              ) : null}
-            </div>
-          </div>
-
+          <WorkflowActionCard actions={workflowActions} loading={modalLoading} />
           <StatusTimeline events={timelineEvents} />
         </div>
       </div>
@@ -832,9 +663,9 @@ export default function ViewRequisitionPage({
       <PaymentModal
         open={paymentOpen}
         loading={modalLoading}
-        amount={Number(req.amount || 0)}
         onClose={() => setPaymentOpen(false)}
         onSubmit={handlePayment}
+        initialAmount={Number(req.amount || 0)}
       />
     </div>
   );

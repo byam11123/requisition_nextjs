@@ -1,13 +1,9 @@
 "use client";
 import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
-
-
-
-
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -72,6 +68,28 @@ export default function CreateAttendancePage() {
     vehicleName: "",
     vehicleNumber: "",
   });
+  const [users, setUsers] = useState<any[]>([]);
+  const [approverId, setApproverId] = useState("");
+
+  useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const token = useAuthStore.getState().token;
+        const [usersRes, defaultsRes] = await Promise.all([
+          fetch("/api/users", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/workflow-defaults?module=DRIVER_ATTENDANCE", { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        if (usersRes.ok) setUsers(await usersRes.json());
+        if (defaultsRes.ok) {
+          const defaults = await defaultsRes.json();
+          if (defaults?.defaultApproverId) setApproverId(defaults.defaultApproverId);
+        }
+      } catch (err) {
+        console.error("Failed to load defaults", err);
+      }
+    };
+    loadDefaults();
+  }, []);
 
   const inputCls =
     "w-full rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500/50";
@@ -159,6 +177,7 @@ export default function CreateAttendancePage() {
           vehicleType: form.vehicleType.trim(),
           vehicleName: form.vehicleName.trim(),
           vehicleNumber: form.vehicleNumber.trim().toUpperCase(),
+          approverId: approverId || null,
         }),
       });
 
@@ -206,21 +225,6 @@ export default function CreateAttendancePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label className={labelCls}>Status</label>
-              <input value="Pending" disabled className={disabledCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Slip ID</label>
-              <input value="Auto Generated on Submit" disabled className={disabledCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Timestamp</label>
-              <input value={timestampPreview || "Auto Generated on Submit"} disabled className={disabledCls} />
-            </div>
-          </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Admin Name *</label>
@@ -312,6 +316,33 @@ export default function CreateAttendancePage() {
             </div>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-1 border-t border-white/5 pt-6">
+            <div>
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                Workflow Assignment
+              </p>
+              <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5">
+                <label className={labelCls}>Assigned Approver *</label>
+                <select
+                  value={approverId}
+                  onChange={(e) => setApproverId(e.target.value)}
+                  className={inputCls}
+                  required
+                >
+                  <option value="">Select Approver</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.fullName} ({u.role})
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-[10px] text-slate-500">
+                  This person will receive the request for approval.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="border-t border-white/5 pt-6">
             <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-indigo-400">
               Geo Tag Photo
@@ -385,9 +416,3 @@ export default function CreateAttendancePage() {
     </div>
   );
 }
-
-
-
-
-
-

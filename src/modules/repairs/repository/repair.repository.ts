@@ -9,10 +9,10 @@ export class RepairRepository {
       .from('requisitions')
       .select(`
         *,
-        createdBy:users!created_by(id, full_name)
+        createdBy:users!created_by(id, fullName)
       `)
       .eq('organization_id', organizationId)
-      .eq('required_for', this.MODULE_KEY)
+      .eq('requiredFor', this.MODULE_KEY)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -24,10 +24,10 @@ export class RepairRepository {
       .from('requisitions')
       .select(`
         *,
-        createdBy:users!created_by(id, full_name),
-        approvedBy:users!approved_by(id, full_name),
-        paidBy:users!paid_by(id, full_name),
-        dispatchedBy:users!dispatched_by(id, full_name)
+        createdBy:users!created_by(id, fullName),
+        approvedBy:users!approved_by(id, fullName),
+        paidBy:users!paid_by(id, fullName),
+        dispatchedBy:users!dispatched_by(id, fullName)
       `)
       .eq('id', id)
       .single();
@@ -41,7 +41,7 @@ export class RepairRepository {
       .from('requisitions')
       .insert({
         ...repairData,
-        required_for: this.MODULE_KEY
+        requiredFor: this.MODULE_KEY
       })
       .select()
       .single();

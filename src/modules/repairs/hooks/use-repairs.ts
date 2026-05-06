@@ -55,7 +55,7 @@ export function useRepairs() {
   const deleteBulk = async (ids: string[]) => {
     try {
       const token = useAuthStore.getState().token;
-      await fetch('/api/repair-maintenance/bulk-delete', {
+      await fetch('/api/repair-maintenance', {
         method: 'DELETE',
         headers: { 
           'Content-Type': 'application/json',

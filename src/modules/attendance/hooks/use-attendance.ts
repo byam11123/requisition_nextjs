@@ -51,7 +51,7 @@ export function useAttendance() {
   const deleteBulk = async (ids: string[]) => {
     try {
       const token = useAuthStore.getState().token;
-      await fetch('/api/attendance/bulk-delete', {
+      await fetch('/api/attendance', {
         method: 'DELETE',
         headers: { 
           'Content-Type': 'application/json',

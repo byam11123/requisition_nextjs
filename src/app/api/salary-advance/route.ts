@@ -5,6 +5,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { prisma } from "@/lib/prisma";
+import { resolvePermissions } from "@/lib/permissions";
 
 declare global {
   interface BigInt {
@@ -246,6 +247,17 @@ export async function POST(req: NextRequest) {
         "0",
       )}`;
 
+      // Fetch org defaults for this module
+      const defaults = await prisma.workflowDefaults.findFirst({
+        where: { 
+          organizationId: dbUser.organizationId, 
+          module: MODULE_KEY
+        }
+      });
+
+      const approverId = data.approverId ? BigInt(data.approverId) : defaults?.defaultApproverId;
+      const payerId = data.payerId ? BigInt(data.payerId) : defaults?.defaultPayerId;
+
       const created = await prisma.requisition.create({
         data: {
           organizationId: dbUser.organizationId,
@@ -264,6 +276,8 @@ export async function POST(req: NextRequest) {
           description: payloadMeta.remarks || "",
           cardSubtitleInfo: JSON.stringify(payloadMeta),
           submittedAt: new Date(),
+          approverId,
+          payerId,
         },
       });
 
@@ -286,8 +300,10 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const user = getUserFromRequest(req);
-  if (!user || user.role !== 'ADMIN') {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const perms = await resolvePermissions({ userId: user.sub, baseRole: user.role, organizationId: user.organizationId });
+  if (!perms.has("salaryAdvance.delete")) {
+    return NextResponse.json({ error: "You do not have permission to delete salary advance records." }, { status: 403 });
   }
 
   try {
@@ -299,6 +315,19 @@ export async function DELETE(req: NextRequest) {
     const prismaIds = ids.map(id => BigInt(id));
     const organizationId = user.organizationId === 'demo' ? 'demo' : BigInt(user.organizationId);
 
+    // Fetch request IDs before deleting from requisition table
+    const targetRequisitions = await prisma.requisition.findMany({
+      where: {
+        id: { in: prismaIds as any },
+        organizationId: organizationId as any,
+        requiredFor: MODULE_KEY,
+      },
+      select: { requestId: true }
+    });
+
+    const requestIds = targetRequisitions.map(r => r.requestId).filter(Boolean);
+
+    // Delete from main requisition table
     await prisma.requisition.deleteMany({
       where: {
         id: { in: prismaIds as any },
@@ -306,6 +335,14 @@ export async function DELETE(req: NextRequest) {
         requiredFor: MODULE_KEY,
       },
     });
+
+    // Delete from specialized salary_advance_requests table
+    if (requestIds.length > 0) {
+      await prisma.$executeRaw`
+        DELETE FROM salary_advance_requests 
+        WHERE request_id = ANY(${requestIds})
+      `;
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

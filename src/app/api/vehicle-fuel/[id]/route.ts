@@ -42,6 +42,7 @@ type VehicleFuelRow = {
   createdAt?: Date | string | null;
   submittedAt?: Date | string | null;
   materialPhotoUrl?: string | null;
+  paymentPhotoUrl?: string | null;
   billPhotoUrl?: string | null;
   cardSubtitleInfo?: string | null;
   approvedAt?: Date | string | null;
@@ -62,6 +63,7 @@ type DevRequisitionRecord = Record<string, unknown> & {
   createdAt?: string;
   submittedAt?: string;
   materialPhotoUrl?: string | null;
+  paymentPhotoUrl?: string | null;
   billPhotoUrl?: string | null;
   cardSubtitleInfo?: string | null;
   createdByName?: string;
@@ -100,6 +102,7 @@ const mapApprovalToStatus = (
 const mapVehicleFuelRecord = (row: VehicleFuelRow) => {
   const meta = parseMeta(row.cardSubtitleInfo);
   const entryTimestamp = row.submittedAt || row.createdAt || new Date().toISOString();
+  const approvedAt = row.approvedAt || null;
 
   return {
     id: String(row.id),
@@ -124,17 +127,19 @@ const mapVehicleFuelRecord = (row: VehicleFuelRow) => {
     totalRunning: Number(meta.totalRunning || 0),
     currentRequirementLitres: Number(meta.currentRequirementLitres || 0),
     lastReadingPhotoUrl: row.materialPhotoUrl || null,
+    logbookPhotoUrl: row.paymentPhotoUrl || null,
     billPhotoUrl: row.billPhotoUrl || null,
     billAmount: Number(meta.billAmount || 0),
     fuelPumpName: meta.fuelPumpName || "",
     approvedAt:
-      typeof row.approvedAt === "string"
-        ? row.approvedAt
-        : row.approvedAt
-          ? new Date(row.approvedAt).toISOString()
+      typeof approvedAt === "string"
+        ? approvedAt
+        : approvedAt
+          ? new Date(approvedAt).toISOString()
           : null,
     approvedByName: row.approvedBy?.fullName || null,
     billUploadedAt: meta.billUploadedAt || null,
+    billUploadedByName: meta.billUploadedByName || null,
   };
 };
 

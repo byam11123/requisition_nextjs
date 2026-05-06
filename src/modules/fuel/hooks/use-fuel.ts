@@ -49,7 +49,7 @@ export function useFuel() {
   const deleteBulk = async (ids: string[]) => {
     try {
       const token = useAuthStore.getState().token;
-      await fetch('/api/vehicle-fuel/bulk-delete', {
+      await fetch('/api/vehicle-fuel', {
         method: 'DELETE',
         headers: { 
           'Content-Type': 'application/json',

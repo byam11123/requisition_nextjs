@@ -4,6 +4,8 @@ import { getUserFromRequest } from "@/lib/auth";
 import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { prisma } from "@/lib/prisma";
+import { resolvePermissions } from "@/lib/permissions";
+import { canPerformStep } from "@/lib/workflow-assignee-guard";
 
 declare global {
   interface BigInt {
@@ -101,9 +103,10 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (user.role !== "MANAGER" && user.role !== "ADMIN") {
+  const perms = await resolvePermissions({ userId: user.sub, baseRole: user.role, organizationId: user.organizationId });
+  if (!perms.has("fuel.approve")) {
     return NextResponse.json(
-      { error: "Only Managers or Admins can approve fuel requests" },
+      { error: "You do not have permission to approve fuel requests." },
       { status: 403 },
     );
   }
@@ -142,6 +145,19 @@ export async function POST(
     }
 
     try {
+      const existing = await prisma.requisition.findUnique({
+        where: { id: BigInt(id) },
+        select: { approverId: true, payerId: true, dispatcherId: true, requiredFor: true }
+      });
+
+      if (!existing || existing.requiredFor !== MODULE_KEY) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      if (!canPerformStep('approve', existing, user)) {
+        return NextResponse.json({ error: "You are not assigned to approve this request" }, { status: 403 });
+      }
+
       const requisition = await prisma.requisition.update({
         where: { id: BigInt(id) },
         data: {

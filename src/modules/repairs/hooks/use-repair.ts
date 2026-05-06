@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
+import { toast } from 'sonner';
 
 export function useRepair(id: string) {
   const { user } = useAuthStore();
@@ -7,8 +8,8 @@ export function useRepair(id: string) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const fetchRepair = async () => {
-    setLoading(true);
+  const fetchRepair = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const token = useAuthStore.getState().token;
       const res = await fetch(`/api/repair-maintenance/${id}`, {
@@ -19,13 +20,13 @@ export function useRepair(id: string) {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
   useEffect(() => {
     if (user && id) fetchRepair();
-  }, [user, id]);
+  }, [id]); // Only refetch if ID changes. user is usually stable.
 
   const updateRepair = async (updates: any) => {
     setSaving(true);
@@ -48,13 +49,20 @@ export function useRepair(id: string) {
     setSaving(true);
     try {
       const token = useAuthStore.getState().token;
-      const res = await fetch(`/api/requisitions/${id}/${action}`, {
+      const res = await fetch(`/api/repair-maintenance/${id}/${action}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload || {})
       });
-      if (!res.ok) throw new Error('Action failed');
-      await fetchRepair();
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Action '${action}' failed`);
+      }
+      await fetchRepair(true); // Silent refresh after action
+      toast.success(`Action '${action}' completed successfully`);
+    } catch (err: any) {
+      toast.error(err.message);
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -66,7 +74,7 @@ export function useRepair(id: string) {
     saving,
     updateRepair,
     processAction,
-    refresh: fetchRepair
+    refresh: () => fetchRepair(true)
   };
 }
 

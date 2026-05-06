@@ -30,6 +30,7 @@ type RepairMeta = {
   dispatchSite?: string;
   dispatchByName?: string;
   dispatchDate?: string;
+  responsiblePersonName?: string;
   receivedBy?: string;
   receivedDate?: string;
   deliveryStatus?: "NOT_DELIVERED" | "DELIVERED";
@@ -74,6 +75,7 @@ const mapRepair = (row: any) => {
     dispatchSite: meta.dispatchSite || null,
     dispatchByName: meta.dispatchByName || null,
     dispatchDate: meta.dispatchDate || null,
+    responsiblePersonName: meta.responsiblePersonName || null,
     receivedBy: meta.receivedBy || null,
     receivedDate: meta.receivedDate || null,
     deliveryStatus: meta.deliveryStatus || "NOT_DELIVERED",
@@ -190,6 +192,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       dispatchSite: body.dispatchSite ?? prevMeta.dispatchSite ?? "",
       dispatchByName: body.dispatchByName ?? prevMeta.dispatchByName ?? "",
       dispatchDate: body.dispatchDate ?? prevMeta.dispatchDate ?? "",
+      responsiblePersonName: body.responsiblePersonName ?? prevMeta.responsiblePersonName ?? "",
       receivedBy: body.receivedBy ?? prevMeta.receivedBy ?? "",
       receivedDate: body.receivedDate ?? prevMeta.receivedDate ?? "",
       deliveryStatus: body.deliveryStatus ?? prevMeta.deliveryStatus ?? "NOT_DELIVERED",

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth";
 import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
+import { resolvePermissions } from "@/lib/permissions";
 
 declare global {
   interface BigInt {
@@ -28,6 +29,7 @@ type RepairMeta = {
   dispatchSite?: string;
   dispatchByName?: string;
   dispatchDate?: string;
+  responsiblePersonName?: string;
 };
 
 const parseMeta = (raw: string | null | undefined): RepairMeta => {
@@ -85,6 +87,9 @@ export async function GET(req: NextRequest) {
         dispatchSite: meta.dispatchSite || null,
         dispatchByName: meta.dispatchByName || null,
         dispatchDate: meta.dispatchDate || null,
+        responsiblePersonName: meta.responsiblePersonName || null,
+        approvalStatus: row.approvalStatus,
+        paymentStatus: row.paymentStatus,
       };
     });
 
@@ -111,6 +116,7 @@ export async function POST(req: NextRequest) {
       dispatchSite: data.dispatchSite || "",
       dispatchByName: data.dispatchByName || "",
       dispatchDate: data.dispatchDate || "",
+      responsiblePersonName: data.responsiblePersonName || "",
     };
 
     const dbUser = await prisma.user.findUnique({
@@ -124,6 +130,18 @@ export async function POST(req: NextRequest) {
         where: { organizationId: dbUser.organizationId, requiredFor: MODULE_KEY },
       })) + 1;
     const requestId = `RM-${new Date().getFullYear()}-${String(nextId).padStart(4, "0")}`;
+
+    // Fetch org defaults for this module
+    const defaults = await prisma.workflowDefaults.findFirst({
+      where: { 
+        organizationId: dbUser.organizationId, 
+        module: MODULE_KEY
+      }
+    });
+
+    const approverId = data.approverId ? BigInt(data.approverId) : defaults?.defaultApproverId;
+    const payerId = data.payerId ? BigInt(data.payerId) : defaults?.defaultPayerId;
+    const dispatcherId = data.dispatcherId ? BigInt(data.dispatcherId) : defaults?.defaultDispatcherId;
 
     const created = await prisma.requisition.create({
       data: {
@@ -144,6 +162,9 @@ export async function POST(req: NextRequest) {
         paymentPhotoUrl: data.paymentProofPhoto || null,
         cardSubtitleInfo: JSON.stringify(payloadMeta),
         submittedAt: new Date(),
+        approverId,
+        payerId,
+        dispatcherId,
       },
       include: {
         createdBy: { select: { fullName: true } },
@@ -174,6 +195,9 @@ export async function POST(req: NextRequest) {
       dispatchSite: payloadMeta.dispatchSite || null,
       dispatchByName: payloadMeta.dispatchByName || null,
       dispatchDate: payloadMeta.dispatchDate || null,
+      responsiblePersonName: payloadMeta.responsiblePersonName || null,
+      approvalStatus: created.approvalStatus,
+      paymentStatus: created.paymentStatus,
     });
   } catch (error) {
     console.error("Repair/Maintenance POST error:", error);
@@ -183,8 +207,10 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const user = getUserFromRequest(req);
-  if (!user || user.role !== 'ADMIN') {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const perms = await resolvePermissions({ userId: user.sub, baseRole: user.role, organizationId: user.organizationId });
+  if (!perms.has("repair.delete")) {
+    return NextResponse.json({ error: "You do not have permission to delete repair records." }, { status: 403 });
   }
 
   try {

@@ -16,6 +16,10 @@ export type RequisitionWorkflowRecord = {
   approvalStatus?: string | null;
   paymentStatus?: string | null;
   dispatchStatus?: string | null;
+  approverId?: string | number | bigint | null;
+  payerId?: string | number | bigint | null;
+  dispatcherId?: string | number | bigint | null;
+  requiredFor?: string | null;
 };
 
 export const REQUISITION_WORKFLOW_STEP_ORDER: RequisitionWorkflowStepKey[] = [
@@ -129,7 +133,13 @@ export function isRequisitionWorkflowStepComplete(
     return record.paymentStatus === "DONE";
   }
 
-  return record.dispatchStatus === "DISPATCHED";
+  if (key === "dispatch") {
+    if (record.requiredFor === "REPAIR_MAINTENANCE") {
+      return record.dispatchStatus === "DELIVERED";
+    }
+    return record.dispatchStatus === "DISPATCHED" || record.dispatchStatus === "DELIVERED";
+  }
+  return false;
 }
 
 export function isRequisitionWorkflowTerminal(record: RequisitionWorkflowRecord) {
@@ -157,6 +167,7 @@ export function canRunRequisitionWorkflowStep(input: {
   config: RequisitionWorkflowConfig;
   key: RequisitionWorkflowStepKey;
   roleKey?: string | null;
+  userId?: string | number | null;
   record: RequisitionWorkflowRecord;
 }) {
   const step = getRequisitionWorkflowStep(input.config, input.key);
@@ -164,8 +175,21 @@ export function canRunRequisitionWorkflowStep(input: {
     return { allowed: false, reason: "This workflow step is disabled." };
   }
 
-  if (!input.roleKey || !step.roles.includes(input.roleKey)) {
-    return { allowed: false, reason: `Only ${step.roles.join(" / ")} can handle this step.` };
+  // Assignment-based authorization
+  const isAdmin = input.roleKey === "ADMIN";
+  const currentUserIdStr = String(input.userId || "");
+  
+  let isAssigned = false;
+  if (input.key === "approval") {
+    isAssigned = input.record.approverId != null && String(input.record.approverId) === currentUserIdStr;
+  } else if (input.key === "payment") {
+    isAssigned = input.record.payerId != null && String(input.record.payerId) === currentUserIdStr;
+  } else if (input.key === "dispatch") {
+    isAssigned = input.record.dispatcherId != null && String(input.record.dispatcherId) === currentUserIdStr;
+  }
+
+  if (!isAdmin && !isAssigned) {
+    return { allowed: false, reason: `You are not assigned to handle the ${step.label} step.` };
   }
 
   if (isRequisitionWorkflowTerminal(input.record) && input.key !== "approval") {

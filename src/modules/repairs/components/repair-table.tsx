@@ -20,7 +20,7 @@ export function RepairTable({
   someVisible?: boolean;
 }) {
   const getStatusTone = (status: string) => {
-    if (status === 'APPROVED' || status === 'DELIVERED') return 'emerald';
+    if (status === 'APPROVED' || status === 'DELIVERED' || status === 'DONE') return 'emerald';
     if (status === 'PENDING') return 'amber';
     if (status === 'REJECTED') return 'rose';
     if (status === 'DISPATCHED') return 'sky';
@@ -45,6 +45,7 @@ export function RepairTable({
             <th className="px-4 py-3">Item & Site</th>
             <th className="px-4 py-3">Requested By</th>
             <th className="px-4 py-3">Status</th>
+            <th className="px-4 py-3">Payment</th>
             <th className="px-4 py-3">Dispatch</th>
             <th className="px-4 py-3 text-right">Actions</th>
           </tr>
@@ -81,6 +82,9 @@ export function RepairTable({
                 </td>
                 <td className="px-4 py-3">
                   <StatusChip tone={getStatusTone(row.approvalStatus as any)}>{row.approvalStatus}</StatusChip>
+                </td>
+                <td className="px-4 py-3">
+                  <StatusChip tone={getStatusTone(row.paymentStatus as any)}>{row.paymentStatus}</StatusChip>
                 </td>
                 <td className="px-4 py-3">
                   <StatusChip tone={getStatusTone(row.dispatchStatus as any)}>{row.dispatchStatus}</StatusChip>

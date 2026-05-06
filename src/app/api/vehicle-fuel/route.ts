@@ -3,6 +3,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { prisma } from "@/lib/prisma";
+import { resolvePermissions } from "@/lib/permissions";
 
 declare global {
   interface BigInt {
@@ -44,6 +45,7 @@ type VehicleFuelRow = {
   createdAt?: Date | string | null;
   submittedAt?: Date | string | null;
   materialPhotoUrl?: string | null;
+  paymentPhotoUrl?: string | null;
   billPhotoUrl?: string | null;
   cardSubtitleInfo?: string | null;
   createdBy?: {
@@ -65,6 +67,7 @@ type DevRequisitionRecord = Record<string, unknown> & {
   createdAt?: string;
   submittedAt?: string;
   materialPhotoUrl?: string | null;
+  paymentPhotoUrl?: string | null;
   billPhotoUrl?: string | null;
   cardSubtitleInfo?: string | null;
   createdByName?: string;
@@ -149,6 +152,7 @@ const mapVehicleFuelRecord = (row: VehicleFuelRow) => {
     totalRunning: Number(meta.totalRunning || 0),
     currentRequirementLitres: Number(meta.currentRequirementLitres || 0),
     lastReadingPhotoUrl: row.materialPhotoUrl || null,
+    logbookPhotoUrl: row.paymentPhotoUrl || null,
     billPhotoUrl: row.billPhotoUrl || null,
     billAmount: Number(meta.billAmount || 0),
     fuelPumpName: meta.fuelPumpName || "",
@@ -248,8 +252,7 @@ export async function POST(req: NextRequest) {
       currentReading: Number(body.currentReading || 0),
       totalRunning: Number(body.totalRunning || 0),
       currentRequirementLitres: Number(body.currentRequirementLitres || 0),
-      fuelPumpName: "",
-      billAmount: 0,
+      billAmount: Number(body.billAmount || 0),
       billUploadedAt: null,
     };
 
@@ -303,6 +306,18 @@ export async function POST(req: NextRequest) {
 
       const requestId = `FUEL-${new Date().getFullYear()}-${String(nextId).padStart(4, "0")}`;
 
+      // Fetch org defaults for this module
+      const defaults = await prisma.workflowDefaults.findFirst({
+        where: { 
+          organizationId: dbUser.organizationId, 
+          module: MODULE_KEY
+        }
+      });
+
+      const approverId = body.approverId ? BigInt(body.approverId) : defaults?.defaultApproverId;
+      const payerId = body.payerId ? BigInt(body.payerId) : defaults?.defaultPayerId;
+      const dispatcherId = body.dispatcherId ? BigInt(body.dispatcherId) : defaults?.defaultDispatcherId;
+
       const created = await prisma.requisition.create({
         data: {
           organizationId: dbUser.organizationId,
@@ -318,6 +333,9 @@ export async function POST(req: NextRequest) {
           siteAddress: payloadMeta.rcNo || "",
           submittedAt: new Date(),
           cardSubtitleInfo: JSON.stringify(payloadMeta),
+          approverId,
+          payerId,
+          dispatcherId,
         },
         include: {
           createdBy: { select: { fullName: true } },
@@ -344,8 +362,11 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const user = getUserFromRequest(req);
-  if (!user || user.role !== 'ADMIN') {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const perms = await resolvePermissions({ userId: user.sub, baseRole: user.role, organizationId: user.organizationId });
+  if (!perms.has("fuel.delete")) {
+    return NextResponse.json({ error: "You do not have permission to delete fuel records." }, { status: 403 });
   }
 
   try {

@@ -48,7 +48,7 @@ export function useSalary() {
   const deleteBulk = async (ids: string[]) => {
     try {
       const token = useAuthStore.getState().token;
-      await fetch('/api/salary-advance/bulk-delete', {
+      await fetch('/api/salary-advance', {
         method: 'DELETE',
         headers: { 
           'Content-Type': 'application/json',

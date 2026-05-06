@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
 
 export default function EditRequisitionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -20,7 +21,7 @@ export default function EditRequisitionPage({ params }: { params: Promise<{ id: 
   useEffect(() => {
     const load = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = useAuthStore.getState().token;
         const res = await fetch(`/api/requisitions/${id}`, { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
@@ -50,7 +51,7 @@ export default function EditRequisitionPage({ params }: { params: Promise<{ id: 
     e.preventDefault();
     setSaving(true); setError('');
     try {
-      const token = localStorage.getItem('token');
+      const token = useAuthStore.getState().token;
       const res = await fetch(`/api/requisitions/${id}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },

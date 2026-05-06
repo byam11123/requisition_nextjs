@@ -11,7 +11,7 @@ export class UserRepository {
         custom_role:custom_roles(id, key, name, base_role, page_access)
       `)
       .eq('organization_id', organizationId)
-      .order('full_name', { ascending: true });
+      .order('fullName', { ascending: true });
 
     if (error) throw error;
     return data;

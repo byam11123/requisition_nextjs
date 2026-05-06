@@ -42,17 +42,20 @@ export class GlobalErrorBoundary extends Component<Props, State> {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={() => window.location.reload()}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500 active:scale-95"
+              onClick={() => {
+                this.setState({ hasError: false });
+                window.location.href = window.location.href;
+              }}
+              className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-6 py-3 font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500 active:scale-95"
             >
               <RefreshCcw size={18} /> Reload Application
             </button>
-            <Link
+            <a
               href="/dashboard"
               className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-slate-300 transition-all hover:bg-white/10 hover:text-white"
             >
               <Home size={18} /> Return to Dashboard
-            </Link>
+            </a>
           </div>
 
           {process.env.NODE_ENV === "development" && this.state.error && (

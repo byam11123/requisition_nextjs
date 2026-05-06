@@ -43,8 +43,9 @@ export function AttendanceTable({
             <th className="px-4 py-3">Slip ID</th>
             <th className="px-4 py-3">Driver</th>
             <th className="px-4 py-3">Route</th>
-            <th className="px-4 py-3">Vehicle</th>
+            <th className="px-4 py-3">Vehicle No.</th>
             <th className="px-4 py-3">Geo Tag</th>
+            <th className="px-4 py-3">Admin</th>
             <th className="px-4 py-3">Status</th>
             <th className="px-4 py-3 text-right">Actions</th>
           </tr>
@@ -52,7 +53,7 @@ export function AttendanceTable({
         <tbody className="divide-y divide-white/5">
           {records.length === 0 ? (
             <tr>
-              <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+              <td colSpan={9} className="px-4 py-12 text-center text-slate-500">
                 No attendance records found.
               </td>
             </tr>
@@ -79,9 +80,8 @@ export function AttendanceTable({
                   <p className="text-slate-200">{record.fromSiteName}</p>
                   <p className="text-xs text-slate-500">To {record.toSiteName}</p>
                 </td>
-                <td className="px-4 py-3">
-                  <p className="text-slate-200">{record.vehicleName}</p>
-                  <p className="text-xs text-slate-500">{record.vehicleNumber}</p>
+                <td className="px-4 py-3 text-slate-300">
+                  {record.vehicleNumber}
                 </td>
                 <td className="px-4 py-3">
                   {record.geoTagPhotoUrl ? (
@@ -89,6 +89,9 @@ export function AttendanceTable({
                   ) : (
                     <StatusChip tone="amber">Pending</StatusChip>
                   )}
+                </td>
+                <td className="px-4 py-3 text-slate-200 italic text-xs">
+                  {record.adminName || '—'}
                 </td>
                 <td className="px-4 py-3"><StatusChip tone={getStatusTone(record.status)}>{record.status}</StatusChip></td>
                 <td className="px-4 py-3 text-right">

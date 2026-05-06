@@ -28,6 +28,8 @@ export class FuelService {
       currentRequirementLitres: row.quantity,
       status: row.approval_status,
       entryTimestamp: row.created_at,
+      lastReadingPhotoUrl: row.material_photo_url,
+      logbookPhotoUrl: row.payment_photo_url,
       billPhotoUrl: row.bill_photo_url,
     };
   }

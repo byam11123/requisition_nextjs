@@ -16,7 +16,7 @@ import { RequisitionTable } from './requisition-table';
 import { formatDate } from '@/utils/format';
 
 export function RequisitionRegister({ user, workflowConfig }: { user: any; workflowConfig: any }) {
-  const { requisitions, loading, stats, deleteBulk } = useRequisitions(user?.organizationId);
+  const { requisitions, loading, stats, deleteBulk } = useRequisitions();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [approvalFilter, setApprovalFilter] = useState('ALL');

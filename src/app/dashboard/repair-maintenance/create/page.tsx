@@ -1,9 +1,5 @@
 "use client";
 import { useAuthStore } from '@/modules/auth/hooks/use-auth-store';
-
-
-
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -25,6 +21,7 @@ export default function CreateRepairMaintenancePage() {
     itemDescription: "",
     quantity: "1",
     repairVendorName: "",
+    responsiblePersonName: "",
     expectedReturnDate: "",
     repairStatus: "NOT_REPAIRED",
   });
@@ -33,6 +30,32 @@ export default function CreateRepairMaintenancePage() {
 
   const [contacts, setContacts] = useState<ContactDefinition[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
+  const [users, setUsers] = useState<any[]>([]);
+  const [approverId, setApproverId] = useState("");
+  const [payerId, setPayerId] = useState("");
+  const [dispatcherId, setDispatcherId] = useState("");
+
+  useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const token = useAuthStore.getState().token;
+        const [usersRes, defaultsRes] = await Promise.all([
+          fetch("/api/users", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/workflow-defaults?module=REPAIR_MAINTENANCE", { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        if (usersRes.ok) setUsers(await usersRes.json());
+        if (defaultsRes.ok) {
+          const defaults = await defaultsRes.json();
+          if (defaults?.defaultApproverId) setApproverId(defaults.defaultApproverId);
+          if (defaults?.defaultPayerId) setPayerId(defaults.defaultPayerId);
+          if (defaults?.defaultDispatcherId) setDispatcherId(defaults.defaultDispatcherId);
+        }
+      } catch (err) {
+        console.error("Failed to load defaults", err);
+      }
+    };
+    loadDefaults();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +102,7 @@ export default function CreateRepairMaintenancePage() {
           setContacts(data);
           setLoadingContacts(false);
           if (data.length > 0) {
-            setForm(prev => ({ ...prev, repairVendorName: data[0].name }));
+            setForm(prev => ({ ...prev, responsiblePersonName: data[0].name }));
           }
         }
       } catch (err) {
@@ -134,7 +157,12 @@ export default function CreateRepairMaintenancePage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          approverId: approverId || null,
+          payerId: payerId || null,
+          dispatcherId: dispatcherId || null,
+        }),
       });
       if (!createRes.ok) {
         const payload = await createRes.json().catch(() => ({}));
@@ -171,12 +199,12 @@ export default function CreateRepairMaintenancePage() {
     { value: "REPAIRED", label: "Repaired" },
   ];
 
-  const vendorOptions: FormSelectOption<string>[] = contacts.map(c => ({
+  const responsiblePersonOptions: FormSelectOption<string>[] = contacts.map(c => ({
     value: c.name,
     label: c.department ? `${c.name} (${c.department})` : c.name,
   }));
-  if (vendorOptions.length === 0 && !loadingContacts) {
-    vendorOptions.push({ value: "", label: "No contacts found - Go to Contact Manager" });
+  if (responsiblePersonOptions.length === 0 && !loadingContacts) {
+    responsiblePersonOptions.push({ value: "", label: "No contacts found - Go to Contact Manager" });
   }
 
   return (
@@ -199,33 +227,13 @@ export default function CreateRepairMaintenancePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className={labelCls}>Request ID</label>
-              <input value="Auto Generated on Submit" disabled className={`${inputCls} opacity-70 cursor-not-allowed`} />
-            </div>
-            <div>
-              <label className={labelCls}>Timestamp</label>
-              <input value="Auto Generated on Submit" disabled className={`${inputCls} opacity-70 cursor-not-allowed`} />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Priority</label>
               <FormSelect
                 value={form.priority}
                 options={priorityOptions}
                 onChange={(value) => setForm((current) => ({ ...current, priority: value }))}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Repair Requisition By (Name)</label>
-              <input
-                value={form.repairRequisitionByName}
-                onChange={set("repairRequisitionByName")}
-                placeholder="Requester name"
-                className={inputCls}
               />
             </div>
             <div>
@@ -253,17 +261,36 @@ export default function CreateRepairMaintenancePage() {
             </div>
             <div>
               <label className={labelCls}>Name of Repair Vendor *</label>
+              <input 
+                value={form.repairVendorName} 
+                onChange={set("repairVendorName")} 
+                className={inputCls} 
+                required 
+                placeholder="Enter repair vendor name" 
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Responsible Person (for this material) *</label>
               {loadingContacts ? (
                 <div className="flex h-[46px] items-center px-4 rounded-xl border border-white/5 bg-slate-900/50 text-slate-400 text-sm">
-                  <Loader2 size={16} className="animate-spin mr-2" /> Loading vendors...
+                  <Loader2 size={16} className="animate-spin mr-2" /> Loading staff...
                 </div>
               ) : (
                 <FormSelect
-                  value={form.repairVendorName}
-                  options={vendorOptions}
-                  onChange={(value) => setForm((current) => ({ ...current, repairVendorName: value }))}
+                  value={form.responsiblePersonName}
+                  options={responsiblePersonOptions}
+                  onChange={(value) => setForm((current) => ({ ...current, responsiblePersonName: value }))}
                 />
               )}
+            </div>
+            <div>
+              <label className={labelCls}>Repair Requisition By (Name)</label>
+              <input
+                value={form.repairRequisitionByName}
+                onChange={set("repairRequisitionByName")}
+                placeholder="Requester name"
+                className={inputCls}
+              />
             </div>
           </div>
 
@@ -322,6 +349,38 @@ export default function CreateRepairMaintenancePage() {
             </div>
           </div>
 
+          {form.warrantyStatus === "OUT_OF_WARRANTY" && (
+            <div className="space-y-4 pt-6 border-t border-white/5">
+              <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-4">Workflow Assignment</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5">
+                  <label className={labelCls}>Assigned Approver *</label>
+                  <select value={approverId} onChange={e => setApproverId(e.target.value)} className={inputCls} required>
+                    <option value="">Select Approver</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>)}
+                  </select>
+                  <p className="mt-2 text-[10px] text-slate-500 uppercase tracking-wider">Approval Step</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5">
+                  <label className={labelCls}>Assigned Payer *</label>
+                  <select value={payerId} onChange={e => setPayerId(e.target.value)} className={inputCls} required>
+                    <option value="">Select Payer</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>)}
+                  </select>
+                  <p className="mt-2 text-[10px] text-slate-500 uppercase tracking-wider">Payment Step</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5">
+                  <label className={labelCls}>Assigned Dispatcher *</label>
+                  <select value={dispatcherId} onChange={e => setDispatcherId(e.target.value)} className={inputCls} required>
+                    <option value="">Select Dispatcher</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>)}
+                  </select>
+                  <p className="mt-2 text-[10px] text-slate-500 uppercase tracking-wider">Dispatch Step</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
             <button
               type="submit"
@@ -337,9 +396,3 @@ export default function CreateRepairMaintenancePage() {
     </div>
   );
 }
-
-
-
-
-
-

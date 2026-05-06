@@ -154,8 +154,26 @@ export class DashboardService {
         label: "Attendance",
         href: "/dashboard/attendance",
         tone: "sky",
-        total: counts.attendance,
+        total: counts.attendance || 0,
         pending: others.filter(r => r.requiredFor === 'DRIVER_ATTENDANCE' && r.approvalStatus === 'PENDING').length,
+        completed: 0
+      },
+      {
+        key: "salary",
+        label: "Salary",
+        href: "/dashboard/salary-advance",
+        tone: "purple",
+        total: counts.salary || 0,
+        pending: others.filter(r => r.requiredFor === 'SALARY_ADVANCE' && r.approvalStatus === 'PENDING').length,
+        completed: 0
+      },
+      {
+        key: "fuel",
+        label: "Fuel",
+        href: "/dashboard/vehicle-fuel",
+        tone: "orange",
+        total: counts.fuel || 0,
+        pending: others.filter(r => r.requiredFor === 'VEHICLE_FUEL' && r.approvalStatus === 'PENDING').length,
         completed: 0
       }
     ];

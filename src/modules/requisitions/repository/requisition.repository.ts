@@ -7,7 +7,7 @@ export class RequisitionRepository {
   async findAll(organizationId: string) {
     const { data, error } = await this.supabase
       .from('requisitions')
-      .select('*, createdBy:users!created_by(full_name)')
+      .select('*, createdBy:users!created_by(fullName)')
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false });
 
@@ -20,10 +20,10 @@ export class RequisitionRepository {
       .from('requisitions')
       .select(`
         *,
-        createdBy:users!created_by(full_name, email),
-        approvedBy:users!approved_by(full_name),
-        paidBy:users!paid_by(full_name),
-        dispatchedBy:users!dispatched_by(full_name),
+        createdBy:users!created_by(fullName, email),
+        approvedBy:users!approved_by(fullName),
+        paidBy:users!paid_by(fullName),
+        dispatchedBy:users!dispatched_by(fullName),
         attachments:attachments(*)
       `)
       .eq('id', id)

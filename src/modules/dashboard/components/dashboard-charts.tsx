@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  PieChart as RePieChart, Pie, Cell, Legend
 } from 'recharts';
+import { PieChart as PieIcon } from 'lucide-react';
 
 interface ChartProps {
   data: any[];
@@ -95,15 +96,28 @@ export function ModuleDistributionChart({ data }: ChartProps) {
   useEffect(() => setMounted(true), []);
 
   const COLORS = ['var(--app-accent)', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+  const hasData = data && data.some(d => d.value > 0);
 
   if (!mounted) return <div className="h-full w-full flex items-center justify-center"><div className="w-32 h-32 rounded-full border-4 border-dashed border-[var(--app-border)] animate-spin" /></div>;
+
+  if (!hasData) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center text-center p-6">
+        <div className="w-24 h-24 rounded-full border-2 border-dashed border-[var(--app-border)] flex items-center justify-center mb-4">
+          <PieIcon size={32} className="text-[var(--app-muted)] opacity-20" />
+        </div>
+        <p className="text-sm font-medium text-[var(--app-muted)]">No activity recorded yet</p>
+        <p className="text-[10px] text-[var(--app-muted)]/60 mt-1 uppercase tracking-wider">Distribution will appear here</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full min-w-0">
       <ResponsiveContainer width="100%" height="100%" debounce={10}>
-        <PieChart>
+        <RePieChart>
           <Pie
-            data={data}
+            data={data.filter(d => d.value > 0)}
             cx="50%"
             cy="50%"
             innerRadius={60}
@@ -112,7 +126,7 @@ export function ModuleDistributionChart({ data }: ChartProps) {
             dataKey="value"
             nameKey="label"
           >
-            {data.map((entry, index) => (
+            {data.filter(d => d.value > 0).map((entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
@@ -121,16 +135,17 @@ export function ModuleDistributionChart({ data }: ChartProps) {
               backgroundColor: 'var(--app-surface)', 
               borderRadius: '16px', 
               border: '1px solid var(--app-border)',
-              color: 'var(--app-text)'
+              color: 'var(--app-text)',
+              fontSize: '12px'
             }} 
           />
           <Legend 
             verticalAlign="bottom" 
             height={36} 
             iconType="circle"
-            formatter={(value) => <span className="text-xs text-[var(--app-muted)]">{value}</span>}
+            formatter={(value) => <span className="text-[10px] font-medium text-[var(--app-muted)] uppercase tracking-wider">{value}</span>}
           />
-        </PieChart>
+        </RePieChart>
       </ResponsiveContainer>
     </div>
   );

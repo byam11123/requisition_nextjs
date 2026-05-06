@@ -13,22 +13,22 @@ export class SalaryService {
   }
 
   private mapRowToSalaryRecord(row: any) {
-    const meta = this.parseMeta(row.card_subtitle_info);
+    const meta = this.parseMeta(row.cardSubtitleInfo);
     const totalAdvance = row.quantity || 0;
     const totalDeducted = meta.totalDeducted || 0;
     
     return {
       id: row.id,
-      requestId: row.request_id,
-      employeeName: row.item_description, // Reused
+      requestId: row.requestId,
+      employeeName: row.materialDescription, // Reused field in DB
       employeeCode: meta.employeeCode,
       designation: meta.designation,
-      department: row.site_address, // Reused
+      department: row.siteAddress, // Reused field in DB
       totalAdvanceRequest: totalAdvance,
       totalDeducted: totalDeducted,
       balanceAdvance: totalAdvance - totalDeducted,
-      status: row.approval_status,
-      entryTimestamp: row.created_at,
+      status: row.approvalStatus,
+      entryTimestamp: row.created_at || row.createdAt,
     };
   }
 

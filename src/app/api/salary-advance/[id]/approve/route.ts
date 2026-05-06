@@ -4,6 +4,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { findDevUserById } from "@/lib/stores/dev-auth-store";
 import { hydrateDemoModuleGlobals } from "@/lib/stores/demo-module-store";
 import { prisma } from "@/lib/prisma";
+import { canPerformStep } from "@/lib/workflow-assignee-guard";
 
 declare global {
   interface BigInt {
@@ -47,12 +48,6 @@ export async function POST(
   }
 
   const role = String(user.role || "").toUpperCase().trim();
-  if (role !== "MANAGER") {
-    return NextResponse.json(
-      { error: "Only managers can approve salary advance requests." },
-      { status: 403 },
-    );
-  }
 
   const body = (await req.json()) as { status?: SalaryAdvanceStatus };
   const nextStatus: SalaryAdvanceStatus =
@@ -101,6 +96,10 @@ export async function POST(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    if (!canPerformStep('approve', existing, user)) {
+      return NextResponse.json({ error: "You are not assigned to approve this salary advance request" }, { status: 403 });
+    }
+
     const updated = await prisma.requisition.update({
       where: { id: BigInt(id) },
       data: {
@@ -113,6 +112,16 @@ export async function POST(
         approvedBy: { select: { fullName: true } },
       },
     });
+
+    // SYNC with salary_advance_requests table
+    await prisma.$executeRaw`
+      UPDATE salary_advance_requests 
+      SET 
+        status = ${nextStatus},
+        approved_by = ${BigInt(user.sub)},
+        approved_at = NOW()
+      WHERE request_id = ${updated.requestId}
+    `;
 
     return NextResponse.json({
       id: String(updated.id),

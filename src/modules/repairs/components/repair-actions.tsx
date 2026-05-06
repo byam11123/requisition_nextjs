@@ -1,12 +1,16 @@
-import { CheckCircle, IndianRupee, Loader2 } from 'lucide-react';
+import { CheckCircle, IndianRupee, Loader2, Truck } from 'lucide-react';
 
 export function RepairActions({ 
-  canApprove, canPay, onApprove, onPay, saving 
+  canApprove, canPay, canDispatch, canDeliver, onApprove, onPay, onDispatch, onDeliver, saving 
 }: { 
   canApprove: boolean; 
   canPay: boolean; 
+  canDispatch: boolean;
+  canDeliver: boolean;
   onApprove: () => void; 
   onPay: () => void; 
+  onDispatch: () => void;
+  onDeliver: () => void;
   saving: boolean 
 }) {
   return (
@@ -35,7 +39,29 @@ export function RepairActions({
         </button>
       )}
 
-      {!canApprove && !canPay && (
+      {canDispatch && (
+        <button 
+          onClick={onDispatch} 
+          disabled={saving} 
+          className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+        >
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
+          Dispatch to Site
+        </button>
+      )}
+
+      {canDeliver && (
+        <button 
+          onClick={onDeliver} 
+          disabled={saving} 
+          className="w-full py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-medium text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+        >
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+          Mark Delivered
+        </button>
+      )}
+
+      {!canApprove && !canPay && !canDispatch && !canDeliver && (
         <p className="text-sm text-[var(--app-muted)] text-center italic py-2">No actions available</p>
       )}
     </div>

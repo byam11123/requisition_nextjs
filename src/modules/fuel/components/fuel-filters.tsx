@@ -17,15 +17,15 @@ export function FuelFilters({
   resultCount 
 }: FuelFiltersProps) {
   return (
-    <div className="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-3xl p-5 backdrop-blur-xl space-y-4">
-      <div className="flex flex-col md:flex-row gap-4">
+    <div className="bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-4">
+      <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1 group">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--app-muted)] transition-colors group-focus-within:text-[var(--app-accent)]" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-muted)] transition-colors group-focus-within:text-[var(--app-accent)]" />
           <input 
             value={searchQuery} 
             onChange={e => onSearchChange(e.target.value)}
-            placeholder="Search fuel requests..."
-            className="w-full bg-[var(--app-panel)] border border-[var(--app-border)] rounded-2xl pl-11 pr-4 py-3 text-sm outline-none focus:border-[var(--app-accent-border)] text-[var(--app-text)]"
+            placeholder="Search fuel requests, vehicle #..."
+            className="w-full bg-[var(--app-panel)] border border-[var(--app-border)] rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-[var(--app-accent-border)] text-[var(--app-text)]"
           />
         </div>
         <div className="flex gap-3">
@@ -40,10 +40,10 @@ export function FuelFilters({
             ]}
             onChange={onStatusChange}
           />
+          <span className="hidden md:flex items-center text-sm text-[var(--app-muted)] px-2 whitespace-nowrap">
+            {resultCount} results
+          </span>
         </div>
-      </div>
-      <div className="text-xs text-[var(--app-muted)] font-medium px-1">
-        Showing <span className="text-[var(--app-text)]">{resultCount}</span> records
       </div>
     </div>
   );

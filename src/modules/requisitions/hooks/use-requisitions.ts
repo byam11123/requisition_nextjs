@@ -10,13 +10,15 @@ export function useRequisitions(organizationId?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchRequisitions = useCallback(async () => {
-    if (!organizationId) {
+    // Use token presence as guard — the server reads org from the JWT,
+    // so we don't need organizationId from the user object (which may be snake_case)
+    const token = useAuthStore.getState().token;
+    if (!token) {
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const token = useAuthStore.getState().token;
       const res = await fetch(`/api/requisitions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -27,7 +29,7 @@ export function useRequisitions(organizationId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, []); // token is read from the store inside, no external dep needed
 
   useEffect(() => {
     fetchRequisitions();
@@ -35,9 +37,13 @@ export function useRequisitions(organizationId?: string) {
 
   const deleteBulk = async (ids: string[]) => {
     try {
-      await fetch('/api/requisitions/bulk-delete', {
+      const token = useAuthStore.getState().token;
+      await fetch('/api/requisitions', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
         body: JSON.stringify({ ids }),
       });
       await fetchRequisitions();

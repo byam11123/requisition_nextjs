@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Boxes, Copy, ExternalLink, MapPinned, QrCode, ZoomIn, Loader2 } from "lucide-react";
+import { useAuthStore } from "@/modules/auth/hooks/use-auth-store";
 import ImagePreviewModal from "@/components/ui/image-preview-modal";
 import StatusChip from "@/components/ui/status-chip";
 import { formatDate } from "@/utils/format";
@@ -15,10 +16,12 @@ export default function StoreItemDetailPage({ params }: { params: Promise<{ id: 
   const [loading, setLoading] = useState(true);
   const [previewData, setPreviewData] = useState<any>(null);
 
+  const { token } = useAuthStore();
+
   useEffect(() => {
+    if (!token) return;
     const load = async () => {
       try {
-        const token = localStorage.getItem("token");
         const [iRes, lRes] = await Promise.all([
           fetch(`/api/store/items/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch("/api/store/locations", { headers: { Authorization: `Bearer ${token}` } })
@@ -30,7 +33,7 @@ export default function StoreItemDetailPage({ params }: { params: Promise<{ id: 
       }
     };
     load();
-  }, [id]);
+  }, [id, token]);
 
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>;
   if (!item) return <p className="py-12 text-center text-slate-400">Item not found</p>;
