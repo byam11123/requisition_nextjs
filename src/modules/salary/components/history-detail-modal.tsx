@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, Calendar, Wallet, FileText, Hash, CheckCircle2 } from "lucide-react";
 import { formatDate } from "@/utils/format";
+import Image from "next/image";
 import ImagePreviewModal from "@/components/ui/image-preview-modal";
 
 interface HistoryDetailModalProps {
@@ -104,7 +105,12 @@ export default function HistoryDetailModal({ isOpen, onClose, record }: HistoryD
                     onClick={() => setPreviewData({ url: record.slip_photo_url, title: "Slip Photo" })}
                     className="group relative block w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-slate-950 text-left"
                   >
-                    <img src={record.slip_photo_url} alt="Slip" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                    <Image 
+                      src={record.slip_photo_url} 
+                      alt="Slip" 
+                      fill 
+                      className="object-cover transition-transform group-hover:scale-105" 
+                    />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                       <p className="text-xs font-medium text-white">Click to Enlarge</p>
                     </div>
@@ -123,7 +129,12 @@ export default function HistoryDetailModal({ isOpen, onClose, record }: HistoryD
                     onClick={() => setPreviewData({ url: record.payment_photo_url, title: "Disbursement Proof" })}
                     className="group relative block w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-slate-950 text-left"
                   >
-                    <img src={record.payment_photo_url} alt="Payment Proof" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                    <Image 
+                      src={record.payment_photo_url} 
+                      alt="Payment Proof" 
+                      fill 
+                      className="object-cover transition-transform group-hover:scale-105" 
+                    />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                       <p className="text-xs font-medium text-white">Click to Enlarge</p>
                     </div>
