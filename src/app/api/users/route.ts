@@ -103,39 +103,8 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Users GET error:", error);
 
-    const devAdminUser = findDevUserById(user.sub);
-    if (devAdminUser && devAdminUser.role === "ADMIN") {
-      const orgUsers = getDevUsersForOrganization(devAdminUser.organizationId);
-      const pageAccessMap = await getUserPageAccessMap(orgUsers.map((entry) => entry.id));
-      const effectiveRoles = await Promise.all(
-        orgUsers.map((entry) =>
-          getEffectiveRoleContext({
-            userId: entry.id,
-            baseRole: entry.role,
-            organizationId: entry.organizationId,
-          }),
-        ),
-      );
-      return NextResponse.json(
-        orgUsers.map((entry, index) => ({
-          id: entry.id,
-          email: entry.email,
-          fullName: entry.fullName,
-          role: entry.role,
-          department: entry.department,
-          designation: entry.designation,
-          isActive: entry.isActive,
-          lastLogin: entry.lastLogin,
-          pageAccess: pageAccessMap.get(entry.id) || null,
-          baseRole: entry.role,
-          customRoleKey: effectiveRoles[index]?.roleKey || entry.role,
-          customRoleName: effectiveRoles[index]?.roleName || entry.role,
-          rolePageAccess: effectiveRoles[index]?.rolePageAccess || null,
-        })),
-      );
-    }
-
-    if (user.sub === "9999") {
+    // Only allow dev fallbacks if we are in a demo organization or a specific dev user
+    if (user.organizationId === 'demo' || user.sub === '9999') {
       const demoOrgUsers = getDevUsersForOrganization("demo");
       const mergedUsers = [
         ...DEV_USERS,
@@ -152,6 +121,7 @@ export async function GET(req: NextRequest) {
             lastLogin: entry.lastLogin,
           })),
       ];
+      
       const pageAccessMap = await getUserPageAccessMap(mergedUsers.map((entry) => entry.id));
       const effectiveRoles = await Promise.all(
         mergedUsers.map((entry) =>
@@ -162,6 +132,7 @@ export async function GET(req: NextRequest) {
           }),
         ),
       );
+
       return NextResponse.json(
         mergedUsers.map((entry, index) => ({
           ...entry,
@@ -174,26 +145,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const pageAccessMap = await getUserPageAccessMap(DEV_USERS.map((entry) => entry.id));
-    const effectiveRoles = await Promise.all(
-      DEV_USERS.map((entry) =>
-        getEffectiveRoleContext({
-          userId: entry.id,
-          baseRole: entry.role,
-          organizationId: "demo",
-        }),
-      ),
-    );
-    return NextResponse.json(
-      DEV_USERS.map((entry, index) => ({
-        ...entry,
-        pageAccess: pageAccessMap.get(entry.id) || null,
-        baseRole: entry.role,
-        customRoleKey: effectiveRoles[index]?.roleKey || entry.role,
-        customRoleName: effectiveRoles[index]?.roleName || entry.role,
-        rolePageAccess: effectiveRoles[index]?.rolePageAccess || null,
-      })),
-    );
+    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }
 
